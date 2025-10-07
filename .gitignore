@@ -18,6 +18,7 @@ ENV/
 # Build artifacts
 build/
 dist/
+setup/
 
 # IDE
 .vscode/
