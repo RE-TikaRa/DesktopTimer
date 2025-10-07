@@ -1,6 +1,6 @@
 # DesktopTimer
 
-ProjectName and Description
+一个基于 PyQt5 的桌面计时器应用（正计时/倒计时、托盘、音效/闪烁提醒、多语言、外观定制）。
 
 <!-- PROJECT SHIELDS -->
 
@@ -39,31 +39,18 @@ ProjectName and Description
  
 ## 目录
 
-- [DesktopTimer](#desktoptimer)
-  - [目录](#目录)
-          - [安装步骤](#安装步骤)
-    - [文件目录说明](#文件目录说明)
-    - [功能概览](#功能概览)
-    - [开发的架构](#开发的架构)
-    - [打包与部署](#打包与部署)
-    - [使用到的框架](#使用到的框架)
-    - [贡献者](#贡献者)
-      - [如何参与开源项目](#如何参与开源项目)
-    - [版本控制](#版本控制)
-    - [作者](#作者)
-    - [版权说明](#版权说明)
-    - [鸣谢](#鸣谢)
-- [DesktopTimer](#desktoptimer-1)
-  - [功能特性](#功能特性)
-  - [目录结构（重要文件）](#目录结构重要文件)
-  - [运行](#运行)
-  - [打包（Windows）](#打包windows)
-  - [设置说明（settings/timer\_settings.json）](#设置说明settingstimer_settingsjson)
-  - [多语言机制（i18n）](#多语言机制i18n)
-  - [托盘与菜单](#托盘与菜单)
-  - [常见问题（FAQ）](#常见问题faq)
-  - [开发提示](#开发提示)
-  - [许可证](#许可证)
+- [安装步骤](#安装步骤)
+- [文件目录说明](#文件目录说明)
+- [功能概览](#功能概览)
+- [开发的架构](#开发的架构)
+- [打包与部署](#打包与部署)
+- [使用到的框架](#使用到的框架)
+- [贡献者](#贡献者)
+  - [如何参与开源项目](#如何参与开源项目)
+- [版本控制](#版本控制)
+- [作者](#作者)
+- [版权说明](#版权说明)
+- [鸣谢](#鸣谢)
 
 ###### 安装步骤
 
@@ -103,19 +90,6 @@ python -m PyInstaller .\DesktopTimer.spec --noconfirm
 
 打包产物位于 `dist\DesktopTimer.exe`。初次运行会生成/更新 `settings/timer_settings.json`，并在项目目录下确保 `sounds/` 文件夹存在。
 
-2) 安装依赖
-
-```pwsh
-pip install -r requirements.txt
-```
-
-3) 运行应用
-
-```pwsh
-python .\desktop_timer.py
-```
-
-初次运行会生成/更新 `settings/timer_settings.json`，并在项目目录下确保 `sounds/` 文件夹存在。
 
 ### 文件目录说明
 
@@ -226,118 +200,3 @@ python -m PyInstaller .\DesktopTimer.spec --noconfirm
 [issues-url]: https://github.com/RE-TikaRa/DesktopTimer/issues
 [license-shield]: https://img.shields.io/github/license/RE-TikaRa/DesktopTimer.svg?style=flat-square
 [license-url]: https://github.com/RE-TikaRa/DesktopTimer/blob/main/LICENSE
-# DesktopTimer
-
-一个基于 PyQt5 的轻量级桌面计时器，支持正计时/倒计时、系统托盘、快捷键、音效提醒、闪烁提醒、多语言（中/英）与个性化外观设置。
-
-## 功能特性
-
-- 正计时与倒计时两种模式，内置番茄钟/短休/长休等快速预设
-- 托盘常驻：暂停/继续、重置、快速预设、显示/隐藏、打开设置、退出
-- 提醒方式：自定义音效（或系统 Beep）、窗口闪烁、气泡提示、可选 Windows 通知（win10toast）
-- 外观可定制：字体/字号、文字与背景色、圆角、背景透明度、夜读模式、窗口尺寸
-- 多语言：`lang/zh_CN.json`、`lang/en_US.json`
-- 设置持久化：`settings/timer_settings.json`
-- 快捷键：
-  - Ctrl+Space 暂停/继续
-  - Ctrl+R 重置
-  - Ctrl+H 显示/隐藏窗口
-  - Ctrl+, 打开设置
-
-## 目录结构（重要文件）
-
-- `desktop_timer.py`：主程序，包含以下核心类
-  - `ClickableLabel`：关于页可点击链接
-  - `L18n`：简易 i18n 访问器
-  - `SettingsDialog`：设置对话框（外观/模式/预设/通用/关于）
-  - `TimerWindow`：主窗口与托盘逻辑、计时逻辑、提醒与快捷键
-  - `main()`：应用入口
-- `lang/`：多语言资源
-  - `zh_CN.json`、`en_US.json`
-- `settings/timer_settings.json`：运行时保存的用户设置
-- `sounds/`：提醒音频（wav/mp3/ogg/m4a/flac，兼容性见常见问题）
-- `img/`：图标与 SVG 资源（程序图标 `timer_icon.ico`、关于页 logo）
-- `DesktopTimer.spec`：PyInstaller 打包配置（已声明 datas：`lang/`、`sounds/`、`img/`、`settings/`）
-- `requirements.txt`：运行依赖
-
-## 运行
-
-1) 安装依赖（建议使用虚拟环境）
-
-```pwsh
-pip install -r requirements.txt
-```
-
-2) 启动程序
-
-```pwsh
-python desktop_timer.py
-```
-
-初次运行会在 `settings/` 写入/更新 `timer_settings.json`。声音目录 `sounds/` 会被自动创建（若不存在）。
-
-## 打包（Windows）
-
-项目提供了 `DesktopTimer.spec`，使用 PyInstaller 一键打包：
-
-```pwsh
-pip install pyinstaller
-pyinstaller .\DesktopTimer.spec
-```
-
-完成后在 `dist/` 目录生成可执行文件与资源。若你临时使用命令行打包（不使用 spec），请确保把 `lang/`、`sounds/`、`img/`、`settings/` 一并打包或复制到 `dist/`，否则多语言与资源会缺失。
-
-可选：若你希望单文件（onefile）模式，可改用命令行参数或调整 spec；但请注意 Qt 插件与资源解包时的启动时延。
-
-## 设置说明（settings/timer_settings.json）
-
-- 外观：`font_family`、`font_size`、`text_color`、`bg_color`、`bg_opacity`、`rounded_corners`、`corner_radius`、`night_mode`
-- 模式：`timer_mode`（“正计时”或“倒计时”/对应英文）、`countdown_hours`/`minutes`/`seconds`
-- 提醒：`countdown_action`（“提示音”“闪烁”“提示音+闪烁”）、`enable_sound`、`enable_popup`、`sound_file`
-- 行为：`auto_start_timer`（启动即开始计时）、`language`（`zh_CN`/`en_US`）
-
-你也可以在应用的“设置”对话框中进行可视化修改，点击“应用/确定”会立即保存。
-
-## 多语言机制（i18n）
-
-- 运行时通过 `L18n` 加载 `lang/<code>.json` 内容；`TimerWindow.tr(key)` 返回当前语言的文案
-- `SettingsDialog` 里多数字符串通过 `self.tr(key)` 获取
-- 切换语言后会重建托盘菜单以应用新文案
-
-若新增文案：同时在 `zh_CN.json` 与 `en_US.json` 增补相同 key；界面代码使用 `tr('your_key')`。
-
-## 托盘与菜单
-
-- 托盘图标会根据状态动态变化（播放/暂停/停止/信息）
-- 双击托盘图标：显示/隐藏主窗口
-- 右键窗口可打开快捷菜单，含暂停/继续、重置、快速预设、设置、显示/隐藏、退出
-
-## 常见问题（FAQ）
-
-1) 无法播放某些音频格式？
-- PyQt5.QtMultimedia 在 Windows 上默认使用 WMF 后端，mp3/wav 支持较好；m4a/ogg/flac 依赖系统编解码器。
-- 解决：优先使用 `wav/mp3`，或安装系统编解码支持。回退方案：启用“弹窗/闪烁”或使用系统 Beep。
-
-2) 打包后资源缺失/界面英文？
-- 请使用仓库内的 `DesktopTimer.spec` 打包，已包含 `datas`；或手动把 `lang/`、`sounds/`、`img/`、`settings/` 复制到 `dist/`。
-
-3) Windows 通知不弹？
-- 依赖 `win10toast`，且系统通知中心需开启。若仍无效，可改用弹窗提示（设置中启用“弹窗”）。
-
-4) 程序窗口“太小/太大”？
-- 在“设置-外观”里调字体大小或选择“窗口尺寸”预设；透明度/圆角也可一并调节。
-
-## 开发提示
-
-- 入口：`main()`；启动时加载 Qt 中文翻译（若存在），并设置默认区域为简体中文
-- 逻辑节拍：`QTimer` 每秒触发，更新 `elapsed_seconds` 与界面文案
-- 倒计时结束的处理：音效/闪烁/弹窗/托盘气泡/可选 Windows 通知
-- 资源路径：大多使用 `os.path.dirname(__file__)` 相对项目根；音频目录使用 `os.getcwd()/sounds`（确保存在）
-
-## 许可证
-
-暂未声明许可证。如需开源发布，建议补充 `LICENSE` 文件并在此注明。
-
----
-
-如需我补一版英文 README 或添加截图/动图演示，请告诉我。
