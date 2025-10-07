@@ -41,6 +41,7 @@
 
 - [DesktopTimer](#desktoptimer)
   - [目录](#目录)
+  - [运行截图](#运行截图)
   - [安装步骤](#安装步骤)
   - [文件目录说明](#文件目录说明)
   - [功能概览](#功能概览)
@@ -50,11 +51,14 @@
   - [贡献者](#贡献者)
   - [ToDo List](#todo-list)
     - [如何参与开源项目](#如何参与开源项目)
-  - [运行截图](#运行截图)
   - [版本控制](#版本控制)
   - [作者](#作者)
   - [版权说明](#版权说明)
   - [鸣谢](#鸣谢)
+
+## 运行截图
+
+![image-20251008030921868](https://s2.loli.net/2025/10/08/XRWK3MHlhUBTZx2.png)
 
 ## 安装步骤
 
@@ -186,9 +190,6 @@ python -m PyInstaller .\DesktopTimer.spec --noconfirm
 4. 推送分支：`git push origin feature/your-feature`
 5. 发起 Pull Request
 
-## 运行截图
-
-![image-20251008030921868](https://s2.loli.net/2025/10/08/XRWK3MHlhUBTZx2.png)
 
 ## 版本控制
 
