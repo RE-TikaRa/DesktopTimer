@@ -180,7 +180,13 @@ python -m PyInstaller .\DesktopTimer.spec --noconfirm
 
 ### 版权说明
 
-本项目暂未声明许可证。若用于开源发布，建议补充 `LICENSE` 文件并在此注明。
+本项目采用「非商用许可」：DesktopTimer Non-Commercial License 1.0（DNCL-1.0）。
+
+- 允许：个人或非商用场景下免费使用、复制、修改与再分发（需保留版权和许可声明，并进行署名）。
+- 禁止：任何形式的商用使用（含出售、付费分发、内含付费功能的再打包等）除非获得作者书面授权。
+- 商用授权：如需商用，请联系作者获取授权：163mail@re-TikaRa.fun。
+
+完整条款请见仓库中的 `LICENSE` 文件。
 
 ### 鸣谢
 
