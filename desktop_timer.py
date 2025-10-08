@@ -1070,6 +1070,23 @@ class TimerWindow(QMainWindow):
                 for key, value in default_settings.items():
                     if key not in self.settings:
                         self.settings[key] = value
+                
+                # 兼容旧版本：将绝对路径转换为相对路径
+                if "sound_file" in self.settings and self.settings["sound_file"]:
+                    sound_file = self.settings["sound_file"]
+                    # 如果是绝对路径，尝试转换为相对路径
+                    if os.path.isabs(sound_file):
+                        try:
+                            rel_path = os.path.relpath(sound_file, base_path)
+                            # 如果文件在 sounds 文件夹内，转换为相对路径
+                            if rel_path.startswith('sounds') and os.path.exists(sound_file):
+                                self.settings["sound_file"] = rel_path
+                                # 立即保存转换后的设置
+                                self.save_settings()
+                                print(f"[兼容] 已将声音文件路径从绝对路径转换为相对路径: {rel_path}")
+                        except (ValueError, OSError):
+                            # 转换失败，保持原样
+                            pass
             except:
                 self.settings = default_settings
         else:
