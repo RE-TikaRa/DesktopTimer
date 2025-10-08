@@ -110,356 +110,353 @@
 
 - [贡献者](#贡献者)- [版本更新日志](#版本更新日志)
 
-  - [如何参与开源项目](#如何参与开源项目)- [开发路线图](#开发路线图)
-
-- [版本控制](#版本控制)  - [已完成功能](#已完成功能)
-
-- [作者](#作者)  - [计划中的功能](#计划中的功能)
-
-- [版权说明](#版权说明)- [贡献指南](#贡献指南)
-
-- [鸣谢](#鸣谢)  - [如何参与开源项目](#如何参与开源项目)
-
-- [版本控制](#版本控制)
-
-## 关于项目- [作者](#作者)
-
-- [版权说明](#版权说明)
-
-DesktopTimer 是一个基于 PyQt5 开发的桌面计时器应用程序，提供简洁直观的用户界面和丰富的自定义选项，适合番茄工作法、时间管理、日常计时等多种场景。- [鸣谢](#鸣谢)
-
-
-
-### 主要功能## 关于项目
-
-
-
-- ⏰ **三种计时模式**DesktopTimer 是一个基于 PyQt5 开发的桌面计时器应用程序，提供简洁直观的用户界面和丰富的自定义选项，适合番茄工作法、时间管理、日常计时等多种场景。
-
-  - 正计时模式：无限累加计时
-
-  - 倒计时模式：设定时间倒数提醒（内置番茄钟/短休/长休等快捷预设）### 主要功能
-
-  - 时钟模式：显示系统当前时间（支持 12/24 小时制、显示秒数、显示日期）
-
-- 🔔 **多种提醒方式**：自定义音效、系统 Beep、窗口闪烁、托盘气泡、Windows 原生通知- ⏰ **三种计时模式**
-
-- 🌍 **多语言支持**：支持中文和英文界面切换  - 正计时模式：无限累加计时
-
-- 🎨 **外观自定义**：字体/字号、文字与背景色、圆角、背景透明度、夜读模式、窗口尺寸  - 倒计时模式：设定时间倒数提醒（内置番茄钟/短休/长休等快捷预设）
-
-- 📍 **系统托盘常驻**：暂停/继续、重置、快捷预设、显示/隐藏、锁定/解锁、打开设置、退出  - 时钟模式：显示系统当前时间（支持 12/24 小时制、显示秒数、显示日期）
-
-- 🔒 **窗口锁定**：锁定后窗口位置固定，鼠标点击可穿透到下层应用，不影响正常使用- 🔔 **多种提醒方式**：自定义音效、系统 Beep、窗口闪烁、托盘气泡、Windows 原生通知
-
-- ⌨️ **快捷键支持**：提供多种快捷键操作，提高使用效率- 🌍 **多语言支持**：支持中文和英文界面切换
-
-- 🎨 **外观自定义**：字体/字号、文字与背景色、圆角、背景透明度、夜读模式、窗口尺寸
-
-### 运行截图- 📍 **系统托盘常驻**：暂停/继续、重置、快捷预设、显示/隐藏、锁定/解锁、打开设置、退出
-
-- 🔒 **窗口锁定**：锁定后窗口位置固定，鼠标点击可穿透到下层应用，不影响正常使用
-
-![DesktopTimer运行截图](https://s2.loli.net/2025/10/08/XRWK3MHlhUBTZx2.png)- ⌨️ **快捷键支持**：提供多种快捷键操作，提高使用效率
-
-
-
-## 上手指南### 运行截图
-
-
-
-### 开发前的配置要求![image-20251008030921868](https://s2.loli.net/2025/10/08/XRWK3MHlhUBTZx2.png)
-
-
-
-1. Python 3.13 或更高版本## 上手指南
-
-2. Windows 操作系统（推荐 Windows 10/11）
-
-3. 建议使用虚拟环境管理依赖### 安装步骤
-
-
-
-### 安装步骤**方式一：使用安装程序（推荐普通用户）**
-
-
-
-**方式一：使用安装程序（推荐普通用户）**1. 前往 [Releases 页面](https://github.com/RE-TikaRa/DesktopTimer/releases/latest)下载最新版本
-
-2. 下载 `DesktopTimer-Setup.exe` 安装包
-
-1. 前往 [Releases 页面](https://github.com/RE-TikaRa/DesktopTimer/releases/latest)下载最新版本3. 双击运行安装程序，按照提示完成安装
-
-2. 下载 `DesktopTimer-Setup.exe` 安装包4. 从开始菜单或桌面快捷方式启动应用
-
-3. 双击运行安装程序，按照提示完成安装
-
-4. 从开始菜单或桌面快捷方式启动应用**方式二：使用便携版**
-
-
-
-**方式二：使用便携版**1. 前往 [Releases 页面](https://github.com/RE-TikaRa/DesktopTimer/releases/latest)
-
-2. 下载 `DesktopTimer.zip` 便携版压缩包
-
-1. 前往 [Releases 页面](https://github.com/RE-TikaRa/DesktopTimer/releases/latest)3. 解压到任意目录
-
-2. 下载 `DesktopTimer.zip` 便携版压缩包4. 直接运行 `DesktopTimer.exe`
-
-3. 解压到任意目录
-
-4. 直接运行 `DesktopTimer.exe`**方式三：从源码运行（开发者）**
-
-
-
-**方式三：从源码运行（开发者）**1. 克隆仓库
-
-
-
-1. 克隆仓库```pwsh
-
-git clone https://github.com/RE-TikaRa/DesktopTimer.git
-
-```pwshcd DesktopTimer
-
-git clone https://github.com/RE-TikaRa/DesktopTimer.git```
-
-cd DesktopTimer
-
-```2. 安装依赖
-
-
-
-2. 安装依赖```pwsh
-
-pip install -r requirements.txt
-
-```pwsh```
-
-pip install -r requirements.txt
-
-```3. 运行程序
-
-
-
-3. 运行程序```pwsh
-
-python desktop_timer.py
-
-```pwsh```
-
-python desktop_timer.py
-
-```**方式四：自己编译可执行文件**
-
-
-
-**方式四：自己编译可执行文件**1. 完成方式三的步骤 1-2
-
-2. 使用 PyInstaller 编译
-
-1. 完成方式三的步骤 1-2
-
-2. 使用 PyInstaller 编译```pwsh
-
-python -m PyInstaller DesktopTimer.spec --noconfirm
-
-```pwsh```
-
-python -m PyInstaller DesktopTimer.spec --noconfirm
-
-```3. 编译完成后，可执行文件位于 `dist\DesktopTimer.exe`
-
-4. 将 `img\`、`lang\`、`sounds\` 文件夹复制到 `dist\` 目录下即可运行
-
-3. 编译完成后，可执行文件位于 `dist\DesktopTimer.exe`
-
-4. 将 `img\`、`lang\`、`sounds\` 文件夹复制到 `dist\` 目录下即可运行## 文件目录说明
-
-
-
-## 文件目录说明```
-
-DesktopTimer/
-
-```├── desktop_timer.py           # 主程序文件（UI/托盘/计时/提醒/设置）
-
-DesktopTimer/├── DesktopTimer.spec          # PyInstaller 打包配置
-
-├── desktop_timer.py           # 主程序文件（UI/托盘/计时/提醒/设置）├── requirements.txt           # Python 依赖列表
-
-├── DesktopTimer.spec          # PyInstaller 打包配置├── README.md                  # 项目说明文档
-
-├── requirements.txt           # Python 依赖列表├── README-object.md           # README 模板参考
-
-├── README.md                  # 项目说明文档├── UPGRADE_GUIDE.md           # 版本升级指南
-
-├── README-object.md           # README 模板参考├── /img/                      # 图标资源目录
-
-├── UPGRADE_GUIDE.md           # 版本升级指南│   ├── timer_icon.ico        # 应用程序图标
-
-├── /img/                      # 图标资源目录│   └── ALP_STUDIO-logo-full.svg  # 关于页面 Logo
-
-│   ├── timer_icon.ico        # 应用程序图标├── /lang/                     # 多语言文件目录
-
-│   └── ALP_STUDIO-logo-full.svg  # 关于页面 Logo│   ├── zh_CN.json            # 简体中文语言包
-
-├── /lang/                     # 多语言文件目录│   └── en_US.json            # 英文语言包
-
-│   ├── zh_CN.json            # 简体中文语言包├── /sounds/                   # 提醒音效目录
-
-│   └── en_US.json            # 英文语言包│   ├── Alarm01.wav           # 默认提醒音 1
-
-├── /sounds/                   # 提醒音效目录│   ├── Alarm02.wav           # 默认提醒音 2
-
-│   ├── Alarm01.wav           # 默认提醒音 1│   └── ...                   # 共 10 个提醒音
-
-│   ├── Alarm02.wav           # 默认提醒音 2├── /settings/                 # 用户设置目录（运行时生成）
-
-│   └── ...                   # 共 10 个提醒音│   └── timer_settings.json   # 用户配置文件
-
-├── /settings/                 # 用户设置目录（运行时生成）├── /build/                    # PyInstaller 构建临时文件
-
-│   └── timer_settings.json   # 用户配置文件└── /dist/                     # 编译输出目录
-
-├── /build/                    # PyInstaller 构建临时文件    └── DesktopTimer.exe      # 可执行文件
-
-└── /dist/                     # 编译输出目录```
-
-    └── DesktopTimer.exe      # 可执行文件
-
-```## 使用说明
-
-
-
-## 使用说明1. **设置倒计时**：在主界面输入小时、分钟、秒数
-
-2. **开始计时**：点击"开始"按钮或使用快捷键 `Ctrl+Space`
-
-1. **设置倒计时**：在主界面输入小时、分钟、秒数3. **暂停/恢复**：点击"暂停"按钮或再次按 `Ctrl+Space`
-
-2. **开始计时**：点击"开始"按钮或使用快捷键 `Ctrl+Space`4. **停止计时**：点击"停止"按钮重置计时器，或使用 `Ctrl+R`
-
-3. **暂停/恢复**：点击"暂停"按钮或再次按 `Ctrl+Space`5. **窗口锁定**：点击锁定图标、使用快捷键 `Ctrl+L`、或通过托盘/右键菜单锁定窗口
-
-4. **停止计时**：点击"停止"按钮重置计时器，或使用 `Ctrl+R`6. **切换模式**：在设置中可选择正计时、倒计时或时钟模式
-
-5. **窗口锁定**：点击锁定图标、使用快捷键 `Ctrl+L`、或通过托盘/右键菜单锁定窗口7. **自定义设置**：
-
-6. **切换模式**：在设置中可选择正计时、倒计时或时钟模式   - 点击设置图标打开设置窗口
-
-7. **自定义设置**：   - 可调整外观、透明度、选择语言、更换提醒音
-
-   - 点击设置图标打开设置窗口   - 设置会自动保存到 `settings/timer_settings.json`
-
-   - 可调整外观、透明度、选择语言、更换提醒音
-
-   - 设置会自动保存到 `settings/timer_settings.json`### 快捷键
-
-
-
-### 快捷键- `Ctrl+Space`：暂停/继续计时
-
-- `Ctrl+R`：重置计时器
-
-- `Ctrl+Space`：暂停/继续计时- `Ctrl+H`：显示/隐藏窗口
-
-- `Ctrl+R`：重置计时器- `Ctrl+L`：锁定/解锁窗口
-
-- `Ctrl+H`：显示/隐藏窗口- `Ctrl+,`：打开设置对话框
-
-- `Ctrl+L`：锁定/解锁窗口
-
-- `Ctrl+,`：打开设置对话框## 开发架构
-
-
-
-## 开发的架构本项目采用 PyQt5 框架构建，主要模块包括：
-
-
-
-本项目采用 PyQt5 框架构建，主要模块包括：- **L18n 类**：负责多语言国际化支持，从 `lang/<code>.json` 加载文案
-
-- **SettingsDialog 类**：设置对话框，管理用户偏好设置（外观/模式/预设/通用/关于）
-
-- **L18n 类**：负责多语言国际化支持，从 `lang/<code>.json` 加载文案- **TimerWindow 类**：主计时器窗口，实现核心计时功能、托盘逻辑、提醒与快捷键
-
-- **SettingsDialog 类**：设置对话框，管理用户偏好设置（外观/模式/预设/通用/关于）- **路径管理**：自动检测运行环境（开发/打包），动态解析资源路径
-
-- **TimerWindow 类**：主计时器窗口，实现核心计时功能、托盘逻辑、提醒与快捷键- **配置管理**：JSON 格式存储用户设置，支持版本兼容
-
-- **路径管理**：自动检测运行环境（开发/打包），动态解析资源路径
-
-- **配置管理**：JSON 格式存储用户设置，支持版本兼容**核心技术要点：**
-
-- 使用 `sys.frozen` 检测打包环境
-
-**核心技术要点：**- 相对路径存储，确保跨系统可移植性
-
-- 使用 `sys.frozen` 检测打包环境- `QTimer` 实现精确计时，每秒 tick 更新界面
-
-- 相对路径存储，确保跨系统可移植性- `QMediaPlayer` 播放提醒音效
-
-- `QTimer` 实现精确计时，每秒 tick 更新界面- `QSystemTrayIcon` 实现系统托盘功能
-
-- `QMediaPlayer` 播放提醒音效- 自动版本兼容转换（v1.0.0 → v1.0.1）
-
-- `QSystemTrayIcon` 实现系统托盘功能
-
-- 自动版本兼容转换（v1.0.0 → v1.0.1）详细架构说明请参考源码注释。
-
-
-
-详细架构说明请参考源码注释。## 打包与部署
-
-
-
-## 打包与部署项目使用 PyInstaller 进行打包，配置文件为 `DesktopTimer.spec`。
-
-
-
-项目使用 PyInstaller 进行打包，配置文件为 `DesktopTimer.spec`。**打包命令：**
-
-
-
-**打包命令：**```pwsh
-
-python -m PyInstaller DesktopTimer.spec --noconfirm
-
-```pwsh```
-
-python -m PyInstaller DesktopTimer.spec --noconfirm
-
-```**打包说明：**
-
-- 打包模式：onefile（单文件模式）
-
-**打包说明：**- 输出位置：`dist\DesktopTimer.exe`
-
-- 打包模式：onefile（单文件模式）- 资源文件：需将 `img\`、`lang\`、`sounds\` 文件夹复制到 `dist\` 目录
-
-- 输出位置：`dist\DesktopTimer.exe`- 图标文件：`img\timer_icon.ico`（包含多尺寸位图）
-
-- 资源文件：需将 `img\`、`lang\`、`sounds\` 文件夹复制到 `dist\` 目录
-
-- 图标文件：`img\timer_icon.ico`（包含多尺寸位图）**注意事项：**
-
-- 首次运行会在 exe 所在目录生成 `settings\timer_settings.json`
-
-**注意事项：**- 确保资源文件夹与 exe 在同一目录
-
-- 首次运行会在 exe 所在目录生成 `settings\timer_settings.json`- 若图标显示异常，可能是系统图标缓存问题，重命名 exe 或清理缓存后重试
-
-- 确保资源文件夹与 exe 在同一目录
-
-- 若图标显示异常，可能是系统图标缓存问题，重命名 exe 或清理缓存后重试**创建安装程序：**
-
-
-
-**创建安装程序：**使用 Inno Setup 可创建 Windows 安装程序，配置文件参考 `setup/SetUp.iss`。
-
-
-
+  # DesktopTimer
+
+  一个功能丰富的桌面计时器应用，支持正计时/倒计时、时钟模式、系统托盘、音效提醒、多语言与外观自定义。
+
+  <!-- PROJECT SHIELDS -->
+
+  [![Contributors][contributors-shield]][contributors-url]
+  [![Forks][forks-shield]][forks-url]
+  [![Stargazers][stars-shield]][stars-url]
+  [![Issues][issues-shield]][issues-url]
+  [![License][license-shield]][license-url]
+
+  <!-- PROJECT LOGO -->
+  <br />
+
+  <p align="center">
+    <a href="https://github.com/RE-TikaRa/DesktopTimer">
+      <img src="img/ALP_STUDIO-logo-full.svg" alt="Logo" width="200">
+    </a>
+
+    <h3 align="center">DesktopTimer | 桌面计时器</h3>
+    <p align="center">
+      一个基于 PyQt5 的桌面计时器，支持正计时/倒计时、系统托盘、快捷键、音效/闪烁提醒、多语言（中/英）与外观个性化。
+      <br />
+      <a href="https://github.com/RE-TikaRa/DesktopTimer"><strong>查看源码 »</strong></a>
+      <br />
+      <br />
+      <a href="#上手指南">快速开始</a>
+      ·
+      <a href="https://github.com/RE-TikaRa/DesktopTimer/issues">报告问题</a>
+      ·
+      <a href="https://github.com/RE-TikaRa/DesktopTimer/issues">提出新特性</a>
+    </p>
+
+  </p>
+
+
+
+  ## 目录
+
+  - [关于项目](#关于项目)
+    - [主要功能](#主要功能)
+    - [运行截图](#运行截图)
+  - [上手指南](#上手指南)
+    - [开发前的配置要求](#开发前的配置要求)
+    - [安装步骤](#安装步骤)
+  - [文件目录说明](#文件目录说明)
+  - [使用说明](#使用说明)
+    - [快捷键](#快捷键)
+  - [开发架构](#开发架构)
+  - [打包与部署](#打包与部署)
+  - [使用到的技术栈](#使用到的技术栈)
+  - [升级指南（内嵌）](#升级指南内嵌)
+  - [版本更新日志](#版本更新日志)
+  - [开发路线图](#开发路线图)
+    - [已完成功能](#已完成功能)
+    - [计划中的功能](#计划中的功能)
+  - [贡献指南](#贡献指南)
+    - [如何参与开源项目](#如何参与开源项目)
+  - [版本控制](#版本控制)
+  - [作者](#作者)
+  - [版权说明](#版权说明)
+  - [鸣谢](#鸣谢)
+
+  ## 关于项目
+
+  DesktopTimer 是一个基于 PyQt5 开发的桌面计时器应用程序，提供简洁直观的用户界面和丰富的自定义选项，适合番茄工作法、时间管理、日常计时等多种场景。
+
+  ### 主要功能
+
+  - ⏰ 三种计时模式：正计时、倒计时、时钟模式（12/24 小时制、秒/日期可选）
+  - 🔔 多种提醒方式：自定义音效、系统 Beep、窗口闪烁、托盘气泡、Windows 通知
+  - 🌍 多语言支持：中文与英文界面切换
+  - 🎨 外观自定义：字体/字号、颜色、圆角、透明度、夜读模式、窗口尺寸
+  - 📍 系统托盘：暂停/继续、重置、快捷预设、显示/隐藏、锁定/解锁、打开设置、退出
+  - 🔒 窗口锁定：位置固定，点击穿透到底层应用
+  - ⌨️ 快捷键：提供常用快捷键操作
+
+  ### 运行截图
+
+  ![DesktopTimer 运行截图](https://s2.loli.net/2025/10/08/XRWK3MHlhUBTZx2.png)
+
+  ## 上手指南
+
+  ### 开发前的配置要求
+
+  1. Python 3.13 或更高版本
+  2. Windows 10/11
+  3. 建议使用虚拟环境
+
+  ### 安装步骤
+
+  【方式一】安装程序（推荐）
+  1. 前往 Releases 页面下载 `DesktopTimer-Setup.exe`
+  2. 双击安装，按提示完成
+  3. 从开始菜单或桌面快捷方式启动
+
+  【方式二】便携版
+  1. 下载 `DesktopTimer.zip`
+  2. 解压到任意目录
+  3. 直接运行 `DesktopTimer.exe`
+
+  【方式三】从源码运行（开发者）
+  ```pwsh
+  git clone https://github.com/RE-TikaRa/DesktopTimer.git
+  cd DesktopTimer
+  pip install -r requirements.txt
+  python desktop_timer.py
+  ```
+
+  【方式四】自行编译可执行文件
+  ```pwsh
+  python -m PyInstaller DesktopTimer.spec --noconfirm
+  ```
+  编译完成后，`dist\DesktopTimer.exe` 可执行；将 `img\`、`lang\`、`sounds\` 一并放入 `dist\` 目录。
+
+  ## 文件目录说明
+
+  ```
+  DesktopTimer/
+  ├── desktop_timer.py           # 主程序文件（UI/托盘/计时/提醒/设置）
+  ├── DesktopTimer.spec          # PyInstaller 打包配置
+  ├── requirements.txt           # Python 依赖列表
+  ├── README.md                  # 项目说明文档（本文件）
+  ├── README-object.md           # README 模板参考
+  ├── /img/                      # 图标资源目录
+  │   ├── timer_icon.ico         # 应用图标
+  │   └── ALP_STUDIO-logo-full.svg
+  ├── /lang/                     # 多语言文件
+  │   ├── zh_CN.json
+  │   └── en_US.json
+  ├── /sounds/                   # 提醒音效（10 个）
+  ├── /settings/                 # 运行时生成的用户设置
+  │   └── timer_settings.json
+  ├── /build/                    # 构建临时文件
+  └── /dist/                     # 编译输出（exe）
+  ```
+
+  ## 使用说明
+
+  1) 设置倒计时：输入小时/分钟/秒
+  2) 开始计时：点击“开始”或 `Ctrl+Space`
+  3) 暂停/恢复：点击“暂停”或 `Ctrl+Space`
+  4) 停止计时：点击“停止”或 `Ctrl+R`
+  5) 窗口锁定：点击锁图标、`Ctrl+L`，或托盘/右键菜单
+  6) 切换模式：设置中选择正计时/倒计时/时钟
+  7) 自定义：外观、透明度、语言、提醒音等；设置自动保存在 `settings/timer_settings.json`
+
+  ### 快捷键
+
+  - `Ctrl+Space`：暂停/继续
+  - `Ctrl+R`：重置
+  - `Ctrl+H`：显示/隐藏窗口
+  - `Ctrl+L`：锁定/解锁窗口
+  - `Ctrl+,`：打开设置
+
+  ## 开发架构
+
+  - L18n：多语言加载（lang/*.json）
+  - SettingsDialog：设置对话框（外观/模式/预设/通用/关于）
+  - TimerWindow：主窗口/计时/托盘/提醒/快捷键
+  - 路径管理：自动识别开发/打包环境，动态定位资源
+  - 配置管理：JSON 持久化，包含版本兼容处理
+
+  要点：`sys.frozen` 检测打包环境；相对路径存储确保可移植；`QTimer`/`QMediaPlayer`/`QSystemTrayIcon` 组合；自动从 v1.0.0 设置迁移到 v1.0.1。
+
+  ## 打包与部署
+
+  使用 `DesktopTimer.spec`：
+  ```pwsh
+  python -m PyInstaller DesktopTimer.spec --noconfirm
+  ```
+  说明：onefile 单文件模式；输出 `dist\DesktopTimer.exe`；将 `img/`、`lang/`、`sounds/` 放入 `dist/`；图标 `img/timer_icon.ico`。
+
+  可用 Inno Setup 生成安装程序（参考本地 `setup/SetUp.iss`）。
+
+  ## 使用到的技术栈
+
+  - PyQt5 - GUI 框架
+  - PyInstaller - 打包工具
+  - win10toast - Windows 通知（可选）
+  - Inno Setup - 安装程序制作
+
+  ## 升级指南（内嵌）
+
+  以下为 v1.0.0 → v1.0.1 的升级说明（已合并自原 UPGRADE_GUIDE.md）：
+
+  ### 🔄 自动兼容处理
+  首次运行 v1.0.1 时，程序会自动处理旧版本设置文件，无需手动操作。
+
+  ### ✨ 兼容性功能
+
+  1) 声音文件路径自动转换
+  - 旧版（绝对路径）：
+    ```json
+    "sound_file": "C:/Program Files/DesktopTimer/sounds/Alarm01.wav"
+    ```
+  - 新版（自动相对路径）：
+    ```json
+    "sound_file": "sounds/Alarm01.wav"
+    ```
+  - 逻辑：检测到绝对路径且位于 `sounds/` 内，则转换为相对路径并保存，提高可移植性。
+
+  2) 新配置项自动添加（时钟模式）
+  ```json
+  "clock_format_24h": true,
+  "clock_show_seconds": true,
+  "clock_show_date": true
+  ```
+
+  3) 用户设置完全保留
+  字体/字号、颜色、透明度、预设、语言、铃声、圆角等全部保留。
+
+  ### 📦 安装方式
+
+  方式 1：直接安装（推荐）
+  1. 运行 `DesktopTimer-Setup.exe`
+  2. 自动检测旧版本并覆盖升级
+  3. 首次运行自动转换设置
+
+  方式 2：手动覆盖
+  1. 关闭 v1.0.0
+  2. 可选备份 `C:\Program Files\DesktopTimer\settings\`
+  3. 解压新版本到旧目录，覆盖 `DesktopTimer.exe` 与 `lang/`、`img/`
+  4. 保留 `settings/` 以及自定义 `sounds/`
+
+  ### 🛡️ 数据保护
+
+  - settings 文件夹：卸载不删除
+  - 自定义铃声：不会被覆盖
+  - 用户配置：升级过程完整保留
+
+  ### ⚠️ 注意事项
+
+  - 转换失败可能因不在程序目录 `sounds/` 或跨盘符；此时保留绝对路径仍可用，建议将外部铃声复制到 `sounds/`。
+  - 首次运行看到控制台输出“[兼容] 已将声音文件路径从绝对路径转换为相对路径”属正常。
+
+  ### 🔧 故障排除
+
+  - 升级后铃声不响：在设置中检查铃声并点击“测试铃声”；若找不到文件，请重新选择或复制到 `sounds/`。
+  - 升级后设置丢失：检查 `settings/timer_settings.json` 是否存在；必要时删除让程序重新生成，或恢复备份。
+  - 语言变英文：设置 → 常规 → 语言选择“简体中文”。
+
+  ### 📝 版本对比
+
+  | 功能 | v1.0.0 | v1.0.1 |
+  |------|--------|--------|
+  | 路径处理 | 绝对路径 | 相对路径（自动转换） |
+  | 窗口锁定 | ✅ | ✅（修复翻译） |
+  | 时钟模式 | ✅ | ✅ |
+  | 编译方式 | onedir | onefile |
+  | 便携性 | ❌ | ✅ |
+
+  ### 🎯 推荐操作
+  升级后建议：首次运行确认设置加载、测试铃声、倒计时与锁定功能（Ctrl+L）；如无问题，可删除旧版本备份。
+
+  如遇问题请到 Issues 提交反馈：
+  https://github.com/RE-TikaRa/DesktopTimer/issues
+
+  ## 版本更新日志
+
+  ### v1.0.1 (2025-01-09)
+  - 新增时钟模式（12/24 小时制、显示秒/日期）
+  - 新增窗口锁定（位置固定+点击穿透）
+  - 路径处理改为相对路径；修复打包后资源路径问题
+  - 自动兼容 v1.0.0 设置；onefile 打包 + 外部资源
+  - 安装程序保护用户设置与自定义音效
+
+  ### v1.0.0 (2025-01-08)
+  - 首次发布：正/倒计时、音效提醒、中英文、窗口外观、系统托盘
+
+  ## 开发路线图
+
+  ### 已完成功能
+  - 正/倒计时/时钟
+  - 窗口锁定
+  - 托盘与快捷操作
+  - 多种提醒（音效/闪烁/通知）
+  - 中英文双语
+  - 外观自定义
+  - 快捷键
+  - 番茄钟预设
+
+  ### 计划中的功能
+  - 自定义快捷键映射
+  - 提醒音量/循环/渐入渐出、播放列表
+  - Windows 通知按钮（“再来 5 分钟”等）
+  - 暗/亮主题托盘图标与自定义图标包
+  - 设置导入/导出与一键恢复默认
+  - 自动更新（Releases 检查）
+  - 开机自启动（可选）
+  - 多语言扩展
+  - CI/自动化测试
+  - 便携模式完善
+
+  ## 贡献指南
+
+  欢迎通过 Issues 或 Pull Requests 参与贡献！
+
+  ### 如何参与开源项目
+  1. Fork 本仓库
+  2. 新建分支：`git checkout -b feature/your-feature`
+  3. 提交改动：`git commit -m "feat: your message"`
+  4. 推送分支：`git push origin feature/your-feature`
+  5. 发起 Pull Request
+
+  ## 版本控制
+
+  项目使用 Git 管理版本；发布版本在 Releases/Tags 标注。
+
+  ## 作者
+
+  **TikaRa**
+  - 邮箱：163mail@re-TikaRa.fun
+  - 个人网站：https://re-tikara.fun
+  - GitHub：https://github.com/RE-TikaRa/DesktopTimer
+  - B 站主页：https://space.bilibili.com/374412219
+
+  ## 版权说明
+
+  本项目采用「非商用许可」：DesktopTimer Non-Commercial License 1.0（DNCL-1.0）。
+  - 允许：个人或非商用场景下免费使用、复制、修改与再分发（需保留版权和许可声明，并署名）
+  - 禁止：任何形式的商用使用（含出售、付费分发、内含付费功能的再打包等）除非获得作者书面授权
+  - 商用授权：如需商用，请联系作者获取授权：163mail@re-TikaRa.fun
+
+  完整条款参见仓库中的 LICENSE 文件。
+
+  ## 鸣谢
+
+  - [PyQt5](https://pypi.org/project/PyQt5/) – GUI 框架
+  - [PyInstaller](https://pyinstaller.org/) – 打包工具
+  - [Qt](https://www.qt.io/) – 跨平台 GUI 框架
+  - [Inno Setup](https://jrsoftware.org/isinfo.php) – 安装程序制作
+  - [Shields.io](https://shields.io) – 徽章生成
+
+  <!-- links -->
+  [your-project-path]:RE-TikaRa/DesktopTimer
+  [contributors-shield]: https://img.shields.io/github/contributors/RE-TikaRa/DesktopTimer.svg?style=flat-square
+  [contributors-url]: https://github.com/RE-TikaRa/DesktopTimer/graphs/contributors
+  [forks-shield]: https://img.shields.io/github/forks/RE-TikaRa/DesktopTimer.svg?style=flat-square
+  [forks-url]: https://github.com/RE-TikaRa/DesktopTimer/network/members
+  [stars-shield]: https://img.shields.io/github/stars/RE-TikaRa/DesktopTimer.svg?style=flat-square
+  [stars-url]: https://github.com/RE-TikaRa/DesktopTimer/stargazers
+  [issues-shield]: https://img.shields.io/github/issues/RE-TikaRa/DesktopTimer.svg?style=flat-square
+  [issues-url]: https://github.com/RE-TikaRa/DesktopTimer/issues
+  [license-shield]: https://img.shields.io/github/license/RE-TikaRa/DesktopTimer.svg?style=flat-square
+  [license-url]: https://github.com/RE-TikaRa/DesktopTimer/blob/main/LICENSE
 使用 Inno Setup 可创建 Windows 安装程序，配置文件参考 `setup/SetUp.iss`。## 使用到的技术栈
 
 
