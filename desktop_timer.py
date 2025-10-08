@@ -40,7 +40,12 @@ import json as _json_i18n
 
 def _load_lang_json(_code: str):
     try:
-        _p = _os_i18n.path.join(_os_i18n.path.dirname(__file__), 'lang', f'{_code}.json')
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            _base_path = _os_i18n.path.dirname(sys.executable)
+        else:
+            _base_path = _os_i18n.path.dirname(__file__)
+        _p = _os_i18n.path.join(_base_path, 'lang', f'{_code}.json')
         with open(_p, 'r', encoding='utf-8') as _f:
             return _json_i18n.load(_f)
     except Exception as _e:
@@ -64,7 +69,13 @@ class L18n:
         self.load(lang_code)
         
     def load(self, lang_code):
-        lang_path = os.path.join(os.path.dirname(__file__), 'lang', f'{lang_code}.json')
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        
+        lang_path = os.path.join(base_path, 'lang', f'{lang_code}.json')
         try:
             with open(lang_path, 'r', encoding='utf-8') as f:
                 self.translations = json.load(f)
@@ -84,7 +95,12 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(self.tr('settings_title'))
         
         # 设置窗口图标
-        icon_path = os.path.join(os.path.dirname(__file__), "img", "timer_icon.ico")
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        icon_path = os.path.join(base_path, "img", "timer_icon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
@@ -598,7 +614,12 @@ class SettingsDialog(QDialog):
         """)
         
         # ALP STUDIO LOGO
-        logo_path = os.path.join(os.path.dirname(__file__), "img", "ALP_STUDIO-logo-full.svg")
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        logo_path = os.path.join(base_path, "img", "ALP_STUDIO-logo-full.svg")
         if os.path.exists(logo_path):
             logo_widget = QSvgWidget(logo_path)
             # 设置更大的尺寸，保持logo原始比例
@@ -807,9 +828,15 @@ class SettingsDialog(QDialog):
     
     def choose_sound_file(self):
         """选择铃声文件"""
-        sound_dir = os.path.join(os.getcwd(), 'sounds')
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        
+        sound_dir = os.path.join(base_path, 'sounds')
         if not os.path.exists(sound_dir):
-            sound_dir = os.getcwd()
+            sound_dir = base_path
             
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -819,12 +846,30 @@ class SettingsDialog(QDialog):
         )
         
         if file_path:
-            self.parent_window.settings["sound_file"] = file_path
+            # 如果文件在 sounds 文件夹内，保存相对路径
+            try:
+                rel_path = os.path.relpath(file_path, base_path)
+                # 如果相对路径在 sounds 文件夹内，使用相对路径
+                if rel_path.startswith('sounds'):
+                    self.parent_window.settings["sound_file"] = rel_path
+                else:
+                    # 否则使用绝对路径（用户选择了外部文件）
+                    self.parent_window.settings["sound_file"] = file_path
+            except ValueError:
+                # 不同盘符，使用绝对路径
+                self.parent_window.settings["sound_file"] = file_path
+            
             self.sound_file_label.setText(os.path.basename(file_path))
             
     def open_sound_folder(self):
         """打开铃声文件夹"""
-        sound_dir = os.path.join(os.getcwd(), 'sounds')
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        
+        sound_dir = os.path.join(base_path, 'sounds')
         if not os.path.exists(sound_dir):
             os.makedirs(sound_dir)
             QMessageBox.information(
@@ -856,8 +901,19 @@ class SettingsDialog(QDialog):
     def test_sound(self):
         """测试铃声"""
         sound_file = self.parent_window.settings.get("sound_file", "")
-        if sound_file and os.path.exists(sound_file):
-            self.parent_window.play_sound(sound_file)
+        if sound_file:
+            # 如果是相对路径，转换为绝对路径
+            if not os.path.isabs(sound_file):
+                if getattr(sys, 'frozen', False):
+                    base_path = os.path.dirname(sys.executable)
+                else:
+                    base_path = os.path.dirname(__file__)
+                sound_file = os.path.join(base_path, sound_file)
+            
+            if os.path.exists(sound_file):
+                self.parent_window.play_sound(sound_file)
+            else:
+                QApplication.beep()
         else:
             QApplication.beep()
     
@@ -866,7 +922,13 @@ class SettingsDialog(QDialog):
         sound_files = self.parent_window.get_sound_files()
         if sound_files:
             selected_sound = random.choice(sound_files)
-            self.parent_window.settings["sound_file"] = selected_sound
+            # 保存相对路径
+            if getattr(sys, 'frozen', False):
+                base_path = os.path.dirname(sys.executable)
+            else:
+                base_path = os.path.dirname(__file__)
+            rel_path = os.path.relpath(selected_sound, base_path)
+            self.parent_window.settings["sound_file"] = rel_path
             self.sound_file_label.setText(os.path.basename(selected_sound))
             # 播放选中的铃声
             self.parent_window.play_sound(selected_sound)
@@ -928,7 +990,12 @@ class TimerWindow(QMainWindow):
         self.media_player = QMediaPlayer()
         
         # 设置窗口图标
-        icon_path = os.path.join(os.path.dirname(__file__), "img", "timer_icon.ico")
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        icon_path = os.path.join(base_path, "img", "timer_icon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
@@ -942,7 +1009,13 @@ class TimerWindow(QMainWindow):
     def get_language(self):
         # 从设置获取语言代码
         try:
-            settings_path = os.path.join(os.path.dirname(__file__), "settings", "timer_settings.json")
+            # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+            if getattr(sys, 'frozen', False):
+                base_path = os.path.dirname(sys.executable)
+            else:
+                base_path = os.path.dirname(__file__)
+            
+            settings_path = os.path.join(base_path, "settings", "timer_settings.json")
             with open(settings_path, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
             return settings.get('language', 'zh_CN')
@@ -954,7 +1027,17 @@ class TimerWindow(QMainWindow):
         
     def load_settings(self):
         """加载设置"""
-        self.settings_file = os.path.join(os.path.dirname(__file__), "settings", "timer_settings.json")
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            # 打包后的 exe
+            base_path = os.path.dirname(sys.executable)
+        else:
+            # 开发环境
+            base_path = os.path.dirname(__file__)
+        
+        settings_dir = os.path.join(base_path, "settings")
+        self.settings_file = os.path.join(settings_dir, "timer_settings.json")
+        
         default_settings = {
             "font_family": "Consolas",
             "font_size": 96,  # 增加字体大小，窗口会更大
@@ -995,6 +1078,11 @@ class TimerWindow(QMainWindow):
     def save_settings(self):
         """保存设置"""
         try:
+            # 确保 settings 目录存在
+            settings_dir = os.path.dirname(self.settings_file)
+            if not os.path.exists(settings_dir):
+                os.makedirs(settings_dir)
+            
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=4, ensure_ascii=False)
         except Exception as e:
@@ -1002,23 +1090,41 @@ class TimerWindow(QMainWindow):
     
     def ensure_sounds_folder(self):
         """确保sounds文件夹存在，并随机选择铃声"""
-        sounds_dir = os.path.join(os.getcwd(), 'sounds')
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        
+        sounds_dir = os.path.join(base_path, 'sounds')
         if not os.path.exists(sounds_dir):
             os.makedirs(sounds_dir)
         
-        # 如果用户没有指定铃声文件，随机选择一个
-        if not self.settings.get("sound_file", "") or not os.path.exists(self.settings.get("sound_file", "")):
+        # 如果用户没有指定铃声文件，或文件不存在，随机选择一个
+        current_sound = self.settings.get("sound_file", "")
+        # 如果是相对路径，转换为绝对路径检查
+        if current_sound and not os.path.isabs(current_sound):
+            current_sound = os.path.join(base_path, current_sound)
+        
+        if not self.settings.get("sound_file", "") or not os.path.exists(current_sound):
             sound_files = self.get_sound_files()
             if sound_files:
-                # 随机选择一个铃声文件
+                # 随机选择一个铃声文件，保存为相对路径
                 selected_sound = random.choice(sound_files)
-                self.settings["sound_file"] = selected_sound
+                rel_path = os.path.relpath(selected_sound, base_path)
+                self.settings["sound_file"] = rel_path
                 self.save_settings()
                 print(f"随机选择铃声: {os.path.basename(selected_sound)}")
     
     def get_sound_files(self):
         """获取sounds文件夹中的所有音频文件"""
-        sounds_dir = os.path.join(os.getcwd(), 'sounds')
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        
+        sounds_dir = os.path.join(base_path, 'sounds')
         if not os.path.exists(sounds_dir):
             return []
         
@@ -1332,8 +1438,21 @@ class TimerWindow(QMainWindow):
         # 播放铃声
         if self.settings.get("enable_sound", True):
             sound_file = self.settings.get("sound_file", "")
-            if sound_file and os.path.exists(sound_file):
-                self.play_sound(sound_file)
+            if sound_file:
+                # 如果是相对路径，转换为绝对路径
+                if not os.path.isabs(sound_file):
+                    if getattr(sys, 'frozen', False):
+                        base_path = os.path.dirname(sys.executable)
+                    else:
+                        base_path = os.path.dirname(__file__)
+                    sound_file = os.path.join(base_path, sound_file)
+                
+                if os.path.exists(sound_file):
+                    self.play_sound(sound_file)
+                else:
+                    # 如果文件不存在，播放系统提示音
+                    if self.tr('beep') in action or '提示音' in action:
+                        QApplication.beep()
             else:
                 # 如果没有自定义铃声，播放系统提示音
                 if self.tr('beep') in action or '提示音' in action:

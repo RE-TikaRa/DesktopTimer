@@ -5,7 +5,7 @@ a = Analysis(
     ['desktop_timer.py'],
     pathex=[],
     binaries=[],
-    datas=[('lang', 'lang'), ('sounds', 'sounds'), ('img', 'img'), ('settings', 'settings')],
+    datas=[],  # 不打包任何数据文件到 exe 内部
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=r"C:\\Users\\Tika\\Desktop\\学校\\PersonalProject\\DesktopTimer\\img\\timer_icon.ico",
+    icon='img\\timer_icon.ico',
 )
