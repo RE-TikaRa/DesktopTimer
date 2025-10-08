@@ -316,7 +316,7 @@ class SettingsDialog(QDialog):
         mode_select_layout = QHBoxLayout()
         mode_label = QLabel(self.tr('mode') + ':')
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems([self.tr('count_up_mode'), self.tr('countdown_mode')])
+        self.mode_combo.addItems([self.tr('count_up_mode'), self.tr('countdown_mode'), self.tr('clock_mode')])
         current_mode = self.parent_window.settings["timer_mode"]
         self.mode_combo.setCurrentText(current_mode)
         self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
@@ -371,6 +371,37 @@ class SettingsDialog(QDialog):
         
         self.countdown_widget.setLayout(countdown_layout)
         mode_layout.addWidget(self.countdown_widget)
+        
+        # 时钟模式设置
+        self.clock_widget = QWidget()
+        clock_layout = QVBoxLayout()
+        
+        # 时间格式
+        format_layout = QHBoxLayout()
+        self.clock_24h_check = QCheckBox(self.tr('clock_24h_format'))
+        self.clock_24h_check.setChecked(self.parent_window.settings.get("clock_format_24h", True))
+        format_layout.addWidget(self.clock_24h_check)
+        format_layout.addStretch()
+        clock_layout.addLayout(format_layout)
+        
+        # 显示秒
+        seconds_layout = QHBoxLayout()
+        self.clock_seconds_check = QCheckBox(self.tr('clock_show_seconds'))
+        self.clock_seconds_check.setChecked(self.parent_window.settings.get("clock_show_seconds", True))
+        seconds_layout.addWidget(self.clock_seconds_check)
+        seconds_layout.addStretch()
+        clock_layout.addLayout(seconds_layout)
+        
+        # 显示日期
+        date_layout = QHBoxLayout()
+        self.clock_date_check = QCheckBox(self.tr('clock_show_date'))
+        self.clock_date_check.setChecked(self.parent_window.settings.get("clock_show_date", True))
+        date_layout.addWidget(self.clock_date_check)
+        date_layout.addStretch()
+        clock_layout.addLayout(date_layout)
+        
+        self.clock_widget.setLayout(clock_layout)
+        mode_layout.addWidget(self.clock_widget)
         
         mode_group.setLayout(mode_layout)
         layout.addWidget(mode_group)
@@ -635,7 +666,7 @@ class SettingsDialog(QDialog):
         info_layout.setSpacing(8)
         
         info_items = [
-            ("版本号", "1.0.0", None),
+            ("版本号", "1.0.1", None),
             ("作者", "TikaRa", None),
             ("邮箱", "163mail@re-TikaRa.fun", "mailto:163mail@re-TikaRa.fun"),
             ("个人网站", "re-tikara.fun", "https://re-tikara.fun"),
@@ -715,7 +746,11 @@ class SettingsDialog(QDialog):
         
     def on_mode_changed(self, mode):
         """模式改变时的处理"""
-        self.countdown_widget.setVisible(self.tr('countdown_mode') in mode or '倒计时' in mode)
+        is_countdown = self.tr('countdown_mode') in mode or '倒计时' in mode
+        is_clock = self.tr('clock_mode') in mode or '时钟' in mode
+        
+        self.countdown_widget.setVisible(is_countdown)
+        self.clock_widget.setVisible(is_clock)
         
     def choose_font(self):
         """选择字体"""
@@ -851,6 +886,9 @@ class SettingsDialog(QDialog):
         self.parent_window.settings["countdown_minutes"] = self.minutes_spin.value()
         self.parent_window.settings["countdown_seconds"] = self.seconds_spin.value()
         self.parent_window.settings["countdown_action"] = self.countdown_action.currentText()
+        self.parent_window.settings["clock_format_24h"] = self.clock_24h_check.isChecked()
+        self.parent_window.settings["clock_show_seconds"] = self.clock_seconds_check.isChecked()
+        self.parent_window.settings["clock_show_date"] = self.clock_date_check.isChecked()
         self.parent_window.settings["language"] = "zh_CN" if self.lang_combo.currentText() == "简体中文" else "en_US"
         self.parent_window.settings["auto_start_timer"] = self.auto_start_check.isChecked()
         self.parent_window.settings["rounded_corners"] = self.rounded_check.isChecked()
@@ -886,6 +924,7 @@ class TimerWindow(QMainWindow):
         self.elapsed_seconds = 0
         self.is_running = self.settings.get("auto_start_timer", False)
         self.is_flashing = False
+        self.is_locked = False  # 窗口锁定状态
         self.media_player = QMediaPlayer()
         
         # 设置窗口图标
@@ -923,7 +962,7 @@ class TimerWindow(QMainWindow):
             "bg_color": "#1E1E1E",
             "bg_opacity": 200,
             "night_mode": False,
-            "timer_mode": "正计时",
+            "timer_mode": "倒计时",  # 默认倒计时模式
             "countdown_hours": 0,
             "countdown_minutes": 25,
             "countdown_seconds": 0,
@@ -934,7 +973,10 @@ class TimerWindow(QMainWindow):
             "corner_radius": 15,
             "enable_sound": True,
             "enable_popup": True,
-            "sound_file": ""
+            "sound_file": "",
+            "clock_format_24h": True,  # 时钟模式：24小时制
+            "clock_show_seconds": True,  # 时钟模式：显示秒
+            "clock_show_date": True  # 时钟模式：显示日期
         }
         
         if os.path.exists(self.settings_file):
@@ -1177,6 +1219,14 @@ class TimerWindow(QMainWindow):
         
         tray_menu.addSeparator()
         
+        # 锁定/解锁动作
+        lock_text = self.tr('unlock_window') if self.is_locked else self.tr('lock_window')
+        lock_action = QAction(lock_text, self)
+        lock_action.triggered.connect(self.toggle_lock)
+        tray_menu.addAction(lock_action)
+        
+        tray_menu.addSeparator()
+        
         # 退出动作
         quit_action = QAction(self.tr('quit'), self)
         quit_action.triggered.connect(self.quit_app)
@@ -1208,25 +1258,68 @@ class TimerWindow(QMainWindow):
         # Ctrl+,: 设置
         QShortcut(QKeySequence('Ctrl+,'), self, self.show_settings)
         
+        # Ctrl+L: 锁定/解锁窗口
+        QShortcut(QKeySequence('Ctrl+L'), self, self.toggle_lock)
+        
     def update_time(self):
         """更新时间显示"""
-        if self.is_running:
-            mode = self.settings["timer_mode"]
-            if self.tr('countdown_mode') in mode or '倒计时' in mode:
-                self.elapsed_seconds -= 1
-                if self.elapsed_seconds <= 0:
-                    self.elapsed_seconds = 0
-                    self.is_running = False
-                    self.on_countdown_finished()
-            else:
-                self.elapsed_seconds += 1
-            
-        hours = abs(self.elapsed_seconds) // 3600
-        minutes = (abs(self.elapsed_seconds) % 3600) // 60
-        seconds = abs(self.elapsed_seconds) % 60
+        mode = self.settings["timer_mode"]
         
-        time_str = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
-        self.time_label.setText(time_str)
+        # 时钟模式
+        if self.tr('clock_mode') in mode or '时钟' in mode:
+            from PyQt5.QtCore import QDateTime
+            current_time = QDateTime.currentDateTime()
+            
+            # 根据设置构建时间格式
+            if self.settings.get("clock_show_date", False):
+                # 显示日期
+                if self.settings.get("clock_format_24h", True):
+                    # 24小时制带日期
+                    if self.settings.get("clock_show_seconds", True):
+                        time_str = current_time.toString("yyyy-MM-dd HH:mm:ss")
+                    else:
+                        time_str = current_time.toString("yyyy-MM-dd HH:mm")
+                else:
+                    # 12小时制带日期
+                    if self.settings.get("clock_show_seconds", True):
+                        time_str = current_time.toString("yyyy-MM-dd hh:mm:ss AP")
+                    else:
+                        time_str = current_time.toString("yyyy-MM-dd hh:mm AP")
+            else:
+                # 不显示日期
+                if self.settings.get("clock_format_24h", True):
+                    # 24小时制
+                    if self.settings.get("clock_show_seconds", True):
+                        time_str = current_time.toString("HH:mm:ss")
+                    else:
+                        time_str = current_time.toString("HH:mm")
+                else:
+                    # 12小时制
+                    if self.settings.get("clock_show_seconds", True):
+                        time_str = current_time.toString("hh:mm:ss AP")
+                    else:
+                        time_str = current_time.toString("hh:mm AP")
+            
+            self.time_label.setText(time_str)
+            
+        # 计时器模式
+        else:
+            if self.is_running:
+                if self.tr('countdown_mode') in mode or '倒计时' in mode:
+                    self.elapsed_seconds -= 1
+                    if self.elapsed_seconds <= 0:
+                        self.elapsed_seconds = 0
+                        self.is_running = False
+                        self.on_countdown_finished()
+                else:
+                    self.elapsed_seconds += 1
+                
+            hours = abs(self.elapsed_seconds) // 3600
+            minutes = (abs(self.elapsed_seconds) % 3600) // 60
+            seconds = abs(self.elapsed_seconds) % 60
+            
+            time_str = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+            self.time_label.setText(time_str)
         
         # 调整窗口大小以适应文本
         self.time_label.adjustSize()
@@ -1410,6 +1503,57 @@ class TimerWindow(QMainWindow):
         """托盘图标激活事件"""
         if reason == QSystemTrayIcon.DoubleClick:
             self.toggle_visibility()
+    
+    def toggle_lock(self):
+        """切换窗口锁定状态"""
+        self.is_locked = not self.is_locked
+        
+        if self.is_locked:
+            # 锁定：只设置鼠标事件穿透，保留键盘事件以便快捷键仍然有效
+            self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            self.tray_icon.showMessage(
+                self.tr('app_name'),
+                self.tr('window_locked'),
+                QSystemTrayIcon.Information,
+                1000
+            )
+            # Windows原生通知 - 锁定
+            if toaster:
+                try:
+                    toaster.show_toast(
+                        "DesktopTimer",
+                        self.tr('window_locked'),
+                        duration=3,
+                        threaded=True
+                    )
+                except Exception as e:
+                    print(f"Windows通知失败: {e}")
+        else:
+            # 解锁：恢复窗口交互
+            self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+            
+            # Windows原生通知 - 解锁
+            if toaster:
+                try:
+                    toaster.show_toast(
+                        "DesktopTimer",
+                        self.tr('window_unlocked'),
+                        duration=3,
+                        threaded=True
+                    )
+                except Exception as e:
+                    print(f"Windows通知失败: {e}")
+            else:
+                # 如果没有 Windows 通知，使用托盘通知
+                self.tray_icon.showMessage(
+                    self.tr('app_name'),
+                    self.tr('window_unlocked'),
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+        
+        # 更新托盘菜单以反映锁定状态
+        self.create_tray_menu()
             
     def quit_app(self):
         """退出应用"""
@@ -1418,13 +1562,13 @@ class TimerWindow(QMainWindow):
         
     def mousePressEvent(self, event):
         """鼠标按下事件 - 用于拖动窗口"""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and not self.is_locked:
             self.dragging = True
             self.offset = event.globalPos() - self.pos()
             
     def mouseMoveEvent(self, event):
         """鼠标移动事件 - 用于拖动窗口"""
-        if self.dragging:
+        if self.dragging and not self.is_locked:
             self.move(event.globalPos() - self.offset)
             
     def mouseReleaseEvent(self, event):
@@ -1470,6 +1614,14 @@ class TimerWindow(QMainWindow):
             preset_menu.addAction(action)
             
         menu.addMenu(preset_menu)
+        menu.addSeparator()
+        
+        # 锁定/解锁窗口
+        lock_text = self.tr('unlock_window') if self.is_locked else self.tr('lock_window')
+        lock_action = QAction(lock_text, self)
+        lock_action.triggered.connect(self.toggle_lock)
+        menu.addAction(lock_action)
+        
         menu.addSeparator()
         
         # 设置

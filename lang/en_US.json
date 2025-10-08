@@ -91,5 +91,13 @@
     "size_small": "Small",
     "size_medium": "Medium", 
     "size_large": "Large",
-    "size_extra_large": "Extra Large"
+    "size_extra_large": "Extra Large",
+    "lock_window": "Lock Window",
+    "unlock_window": "Unlock Window",
+    "window_locked": "Window Locked (Ctrl+L to unlock)",
+    "window_unlocked": "Window Unlocked",
+    "clock_mode": "Clock Mode",
+    "clock_24h_format": "24-Hour Format",
+    "clock_show_seconds": "Show Seconds",
+    "clock_show_date": "Show Date"
 }

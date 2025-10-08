@@ -91,5 +91,13 @@
     "size_small": "小",
     "size_medium": "中",
     "size_large": "大",
-    "size_extra_large": "超大"
+    "size_extra_large": "超大",
+    "lock_window": "锁定窗口",
+    "unlock_window": "解锁窗口",
+    "window_locked": "窗口已锁定（Ctrl+L 解锁）",
+    "window_unlocked": "窗口已解锁",
+    "clock_mode": "时钟模式",
+    "clock_24h_format": "24小时制",
+    "clock_show_seconds": "显示秒数",
+    "clock_show_date": "显示日期"
 }
