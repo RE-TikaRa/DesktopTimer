@@ -687,7 +687,7 @@ class SettingsDialog(QDialog):
         info_layout.setSpacing(8)
         
         info_items = [
-            ("版本号", "1.0.1", None),
+            ("版本号", "1.0.2", None),
             ("作者", "TikaRa", None),
             ("邮箱", "163mail@re-TikaRa.fun", "mailto:163mail@re-TikaRa.fun"),
             ("个人网站", "re-tikara.fun", "https://re-tikara.fun"),
