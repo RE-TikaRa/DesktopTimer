@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QSystemTrayIcon,
                              QPushButton, QSlider, QComboBox, QSpinBox, QCheckBox,
                              QGroupBox, QColorDialog, QFontDialog, QTabWidget,
                              QWidget, QMessageBox, QShortcut, QGridLayout, QFileDialog,
-                             QListWidget, QStyle, QScrollArea)
+                             QListWidget, QStyle, QScrollArea, QKeySequenceEdit)
 from PyQt5.QtGui import QIcon
 
 # 自定义可点击标签类
@@ -60,6 +60,15 @@ except NameError:
         'en_US': _load_lang_json('en_US'),
     }
 # ------------------------------------------------------
+
+# ------- 快捷键默认映射（可被 settings 覆盖） -------
+DEFAULT_SHORTCUTS = {
+    'pause_resume': 'Ctrl+Space',
+    'reset': 'Ctrl+R',
+    'show_hide': 'Ctrl+H',
+    'open_settings': 'Ctrl+,',
+    'lock_unlock': 'Ctrl+L',
+}
 
 
 class L18n:
@@ -566,26 +575,41 @@ class SettingsDialog(QDialog):
         sound_group.setLayout(sound_layout)
         layout.addWidget(sound_group)
         
-        # 快捷键设置
+        # 快捷键设置（可编辑）
         shortcut_group = QGroupBox(self.tr('shortcuts'))
         shortcut_layout = QVBoxLayout()
-        
-        shortcuts_info = [
-            (self.tr('shortcut_pause'), 'Ctrl+Space'),
-            (self.tr('shortcut_reset'), 'Ctrl+R'),
-            (self.tr('shortcut_hide'), 'Ctrl+H'),
-            (self.tr('shortcut_settings'), 'Ctrl+,'),
+
+        # 读取当前快捷键设置（若不存在，用默认）
+        current_shortcuts = dict(DEFAULT_SHORTCUTS)
+        current_shortcuts.update(self.parent_window.settings.get('shortcuts', {}))
+
+        # 准备字段：键 -> (翻译文本, setting_key)
+        fields = [
+            (self.tr('shortcut_pause') or '暂停/继续', 'pause_resume'),
+            (self.tr('shortcut_reset') or '重置', 'reset'),
+            (self.tr('shortcut_hide') or '显示/隐藏', 'show_hide'),
+            (self.tr('shortcut_settings') or '打开设置', 'open_settings'),
+            (getattr(self, 'tr', lambda k: None)('shortcut_lock') or '锁定/解锁', 'lock_unlock'),
         ]
-        
-        for label, key in shortcuts_info:
-            info_layout = QHBoxLayout()
-            info_layout.addWidget(QLabel(label + ':'))
-            key_label = QLabel(key)
-            key_label.setStyleSheet('QLabel { background-color: #f0f0f0; padding: 5px; border-radius: 3px; font-family: Consolas; }')
-            info_layout.addWidget(key_label)
-            info_layout.addStretch()
-            shortcut_layout.addLayout(info_layout)
-        
+
+        self.shortcut_edits = {}
+        for label_text, skey in fields:
+            row = QHBoxLayout()
+            row.addWidget(QLabel(label_text + ':'))
+            editor = QKeySequenceEdit()
+            try:
+                editor.setKeySequence(QKeySequence(current_shortcuts.get(skey, DEFAULT_SHORTCUTS[skey])))
+            except Exception:
+                editor.setKeySequence(QKeySequence(DEFAULT_SHORTCUTS[skey]))
+            row.addWidget(editor, 1)
+            row.addStretch()
+            shortcut_layout.addLayout(row)
+            self.shortcut_edits[skey] = editor
+
+        hint = QLabel(self.tr('shortcut_edit_hint') if 'shortcut_edit_hint' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else '提示：点击后按下组合键（如 Ctrl+Space）。')
+        hint.setStyleSheet('color:#666;')
+        shortcut_layout.addWidget(hint)
+
         shortcut_group.setLayout(shortcut_layout)
         layout.addWidget(shortcut_group)
         
@@ -957,6 +981,14 @@ class SettingsDialog(QDialog):
         self.parent_window.settings["corner_radius"] = self.radius_spin.value()
         self.parent_window.settings["enable_sound"] = self.enable_sound_check.isChecked()
         self.parent_window.settings["enable_popup"] = self.enable_popup_check.isChecked()
+
+        # 保存快捷键到设置
+        shortcuts_saved = dict(self.parent_window.settings.get('shortcuts', {}))
+        for skey, editor in getattr(self, 'shortcut_edits', {}).items():
+            seq = editor.keySequence().toString()
+            # 若为空，使用默认
+            shortcuts_saved[skey] = seq if seq else DEFAULT_SHORTCUTS.get(skey, '')
+        self.parent_window.settings['shortcuts'] = shortcuts_saved
         
         # 应用窗口大小设置
         size_text = self.size_combo.currentText()
@@ -970,6 +1002,11 @@ class SettingsDialog(QDialog):
             self.parent_window.settings["font_size"] = 120
         
         self.parent_window.apply_settings()
+        # 让主窗口根据新快捷键重载绑定
+        try:
+            self.parent_window.reload_shortcuts()
+        except Exception:
+            pass
         self.parent_window.save_settings()
         
     def accept_settings(self):
@@ -1059,7 +1096,9 @@ class TimerWindow(QMainWindow):
             "sound_file": "",
             "clock_format_24h": True,  # 时钟模式：24小时制
             "clock_show_seconds": True,  # 时钟模式：显示秒
-            "clock_show_date": True  # 时钟模式：显示日期
+            "clock_show_date": True,  # 时钟模式：显示日期
+            # 自定义快捷键（如 settings 中不存在，则使用默认）
+            "shortcuts": dict(DEFAULT_SHORTCUTS),
         }
         
         if os.path.exists(self.settings_file):
@@ -1070,6 +1109,13 @@ class TimerWindow(QMainWindow):
                 for key, value in default_settings.items():
                     if key not in self.settings:
                         self.settings[key] = value
+                # 确保快捷键子项存在并合并默认
+                if 'shortcuts' not in self.settings or not isinstance(self.settings['shortcuts'], dict):
+                    self.settings['shortcuts'] = dict(DEFAULT_SHORTCUTS)
+                else:
+                    merged = dict(DEFAULT_SHORTCUTS)
+                    merged.update(self.settings['shortcuts'])
+                    self.settings['shortcuts'] = merged
                 
                 # 兼容旧版本：将绝对路径转换为相对路径
                 if "sound_file" in self.settings and self.settings["sound_file"]:
@@ -1091,6 +1137,13 @@ class TimerWindow(QMainWindow):
                 self.settings = default_settings
         else:
             self.settings = default_settings
+        # 再次确保 shortcuts 完整
+        try:
+            merged = dict(DEFAULT_SHORTCUTS)
+            merged.update(self.settings.get('shortcuts', {}))
+            self.settings['shortcuts'] = merged
+        except Exception:
+            self.settings['shortcuts'] = dict(DEFAULT_SHORTCUTS)
             
     def save_settings(self):
         """保存设置"""
@@ -1368,21 +1421,48 @@ class TimerWindow(QMainWindow):
         self.flash_timer.timeout.connect(self.flash_window)
         
     def init_shortcuts(self):
-        """初始化快捷键"""
-        # Ctrl+Space: 暂停/继续
-        QShortcut(QKeySequence('Ctrl+Space'), self, self.toggle_pause)
-        
-        # Ctrl+R: 重置
-        QShortcut(QKeySequence('Ctrl+R'), self, self.reset_timer)
-        
-        # Ctrl+H: 显示/隐藏
-        QShortcut(QKeySequence('Ctrl+H'), self, self.toggle_visibility)
-        
-        # Ctrl+,: 设置
-        QShortcut(QKeySequence('Ctrl+,'), self, self.show_settings)
-        
-        # Ctrl+L: 锁定/解锁窗口
-        QShortcut(QKeySequence('Ctrl+L'), self, self.toggle_lock)
+        """初始化快捷键（根据设置绑定）"""
+        self._shortcut_objs = []
+        self._bind_shortcuts()
+
+    def _clear_shortcuts(self):
+        objs = getattr(self, '_shortcut_objs', [])
+        for obj in objs:
+            try:
+                obj.setParent(None)
+            except Exception:
+                pass
+        self._shortcut_objs = []
+
+    def _bind_shortcuts(self):
+        self._clear_shortcuts()
+        sc = self.settings.get('shortcuts', {})
+        mapping = [
+            (sc.get('pause_resume', DEFAULT_SHORTCUTS['pause_resume']), self.toggle_pause),
+            (sc.get('reset', DEFAULT_SHORTCUTS['reset']), self.reset_timer),
+            (sc.get('show_hide', DEFAULT_SHORTCUTS['show_hide']), self.toggle_visibility),
+            (sc.get('open_settings', DEFAULT_SHORTCUTS['open_settings']), self.show_settings),
+            (sc.get('lock_unlock', DEFAULT_SHORTCUTS['lock_unlock']), self.toggle_lock),
+        ]
+        for seq_str, handler in mapping:
+            try:
+                if seq_str:
+                    obj = QShortcut(QKeySequence(seq_str), self, handler)
+                    self._shortcut_objs.append(obj)
+            except Exception as _e:
+                print(f"[shortcuts] 绑定失败: {seq_str}: {_e}")
+
+    def reload_shortcuts(self):
+        """根据当前 settings 重新绑定快捷键（用于设置更改后）"""
+        # 合并默认，防止缺失
+        merged = dict(DEFAULT_SHORTCUTS)
+        try:
+            merged.update(self.settings.get('shortcuts', {}))
+        except Exception:
+            pass
+        self.settings['shortcuts'] = merged
+        # 重绑
+        self._bind_shortcuts()
         
     def update_time(self):
         """更新时间显示"""
