@@ -2,7 +2,16 @@
 
 <p align="center">
    <a href="https://github.com/RE-TikaRa/DesktopTimer/graphs/contributors">
-      <img src="https://img.shields.io/github/contributors/RE-TikaRa/DesktopTimer.svg?style=flat-square" alt="Contributors" />
+      <img src="https://img.shields.io/github/contributors/RE-TikaRa### 📌 计划中的功能
+- 🖱️ 右键快捷菜单：支持主窗口右键设置快速配置选项
+- 🔄 托盘模式切换：在系统托盘菜单中直接切换计时模式（正计时/倒计时/时钟）
+- 🔔 结束提醒增强：音量、循环次数、渐入渐出；播放列表/多音频轮播
+- 💬 Windows 原生通知按钮（如"再来 5 分钟""停止"）
+- 🎨 托盘与主题：暗/亮主题托盘图标，自定义图标包
+- ⚙️ 设置管理：设置导出/导入备份，一键恢复默认
+- 🔄 自动更新：检查 Releases 新版本并提示下载
+- 🚀 开机自启动（用户可选）
+- 🌐 多语言扩展：支持更多语言（日文、韩文等）Timer.svg?style=flat-square" alt="Contributors" />
    </a>
    <a href="https://github.com/RE-TikaRa/DesktopTimer/network/members">
       <img src="https://img.shields.io/github/forks/RE-TikaRa/DesktopTimer.svg?style=flat-square" alt="Forks" />
