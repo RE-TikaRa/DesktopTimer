@@ -348,7 +348,7 @@ class SettingsDialog(QDialog):
         font_layout = QVBoxLayout()
         
         font_btn_layout = QHBoxLayout()
-        font_label = QLabel(f'{self.tr("current_font")}: {self.parent_window.settings["font_family"]}, {self.tr("font_size")}: {self.parent_window.settings["font_size"]}')
+        font_label = QLabel(f'{self.tr("current_font")}: {self.parent_window.settings.get("font_family", "Consolas")}, {self.tr("font_size")}: {self.parent_window.settings.get("font_size", 96)}')
         self.font_label = font_label
         font_btn = QPushButton(self.tr('choose_font'))
         font_btn.clicked.connect(self.choose_font)
@@ -368,7 +368,7 @@ class SettingsDialog(QDialog):
         text_color_label = QLabel(self.tr('text_color') + ':')
         self.text_color_btn = QPushButton()
         self.text_color_btn.setFixedSize(80, 30)
-        self.update_color_button(self.text_color_btn, self.parent_window.settings["text_color"])
+        self.update_color_button(self.text_color_btn, self.parent_window.settings.get("text_color", "#E0E0E0"))
         self.text_color_btn.clicked.connect(self.choose_text_color)
         text_color_layout.addWidget(text_color_label)
         text_color_layout.addWidget(self.text_color_btn)
@@ -380,7 +380,7 @@ class SettingsDialog(QDialog):
         bg_color_label = QLabel(self.tr('bg_color') + ':')
         self.bg_color_btn = QPushButton()
         self.bg_color_btn.setFixedSize(80, 30)
-        self.update_color_button(self.bg_color_btn, self.parent_window.settings["bg_color"])
+        self.update_color_button(self.bg_color_btn, self.parent_window.settings.get("bg_color", "#1E1E1E"))
         self.bg_color_btn.clicked.connect(self.choose_bg_color)
         bg_color_layout.addWidget(bg_color_label)
         bg_color_layout.addWidget(self.bg_color_btn)
@@ -399,8 +399,8 @@ class SettingsDialog(QDialog):
         self.opacity_slider = QSlider(Qt.Horizontal)
         self.opacity_slider.setMinimum(0)
         self.opacity_slider.setMaximum(255)
-        self.opacity_slider.setValue(self.parent_window.settings["bg_opacity"])
-        self.opacity_value_label = QLabel(f'{self.parent_window.settings["bg_opacity"]}')
+        self.opacity_slider.setValue(self.parent_window.settings.get("bg_opacity", 200))
+        self.opacity_value_label = QLabel(f'{self.parent_window.settings.get("bg_opacity", 200)}')
         self.opacity_slider.valueChanged.connect(
             lambda v: self.opacity_value_label.setText(f'{v}')
         )
@@ -465,7 +465,7 @@ class SettingsDialog(QDialog):
         night_layout = QVBoxLayout()
         
         self.night_mode_check = QCheckBox(self.tr('night_mode_desc'))
-        self.night_mode_check.setChecked(self.parent_window.settings["night_mode"])
+        self.night_mode_check.setChecked(self.parent_window.settings.get("night_mode", False))
         night_layout.addWidget(self.night_mode_check)
         
         night_group.setLayout(night_layout)
@@ -532,17 +532,17 @@ class SettingsDialog(QDialog):
         self.hours_spin = QSpinBox()
         self.hours_spin.setRange(0, 99)
         self.hours_spin.setSuffix(' ' + self.tr('hours'))
-        self.hours_spin.setValue(self.parent_window.settings["countdown_hours"])
+        self.hours_spin.setValue(self.parent_window.settings.get("countdown_hours", 0))
         
         self.minutes_spin = QSpinBox()
         self.minutes_spin.setRange(0, 59)
         self.minutes_spin.setSuffix(' ' + self.tr('minutes'))
-        self.minutes_spin.setValue(self.parent_window.settings["countdown_minutes"])
+        self.minutes_spin.setValue(self.parent_window.settings.get("countdown_minutes", 25))
         
         self.seconds_spin = QSpinBox()
         self.seconds_spin.setRange(0, 59)
         self.seconds_spin.setSuffix(' ' + self.tr('seconds'))
-        self.seconds_spin.setValue(self.parent_window.settings["countdown_seconds"])
+        self.seconds_spin.setValue(self.parent_window.settings.get("countdown_seconds", 0))
         
         time_layout.addWidget(self.hours_spin)
         time_layout.addWidget(self.minutes_spin)
@@ -557,7 +557,7 @@ class SettingsDialog(QDialog):
         self.countdown_action = QComboBox()
         self.countdown_action.addItems([self.tr('beep'), self.tr('flash'), self.tr('beep_flash')])
         # 匹配现有设置
-        current_action = self.parent_window.settings["countdown_action"]
+        current_action = self.parent_window.settings.get("countdown_action", "beep")
         for i in range(self.countdown_action.count()):
             if self.countdown_action.itemText(i) in current_action or current_action in self.countdown_action.itemText(i):
                 self.countdown_action.setCurrentIndex(i)
@@ -889,8 +889,8 @@ class SettingsDialog(QDialog):
         
     def choose_font(self):
         """选择字体"""
-        current_font = QFont(self.parent_window.settings["font_family"], 
-                           self.parent_window.settings["font_size"])
+        current_font = QFont(self.parent_window.settings.get("font_family", "Consolas"), 
+                           self.parent_window.settings.get("font_size", 96))
         
         # 创建字体对话框并设置中文标题和选项
         font_dialog = QFontDialog(current_font, self)
@@ -910,14 +910,14 @@ class SettingsDialog(QDialog):
             
     def choose_text_color(self):
         """选择文字颜色"""
-        color = QColorDialog.getColor(QColor(self.parent_window.settings["text_color"]), self)
+        color = QColorDialog.getColor(QColor(self.parent_window.settings.get("text_color", "#E0E0E0")), self)
         if color.isValid():
             self.parent_window.settings["text_color"] = color.name()
             self.update_color_button(self.text_color_btn, color.name())
             
     def choose_bg_color(self):
         """选择背景颜色"""
-        color = QColorDialog.getColor(QColor(self.parent_window.settings["bg_color"]), self)
+        color = QColorDialog.getColor(QColor(self.parent_window.settings.get("bg_color", "#1E1E1E")), self)
         if color.isValid():
             self.parent_window.settings["bg_color"] = color.name()
             self.update_color_button(self.bg_color_btn, color.name())
@@ -1207,6 +1207,20 @@ class TimerWindow(QMainWindow):
             "timer_mode": "倒计时",  # 默认倒计时模式
             # 语言无关的计时模式键（与 timer_mode 文本解耦）
             "timer_mode_key": "countdown",  # 可选: 'countup' | 'countdown' | 'clock'
+            # 倒计时默认时间设置
+            "countdown_hours": 0,
+            "countdown_minutes": 25,
+            "countdown_seconds": 0,
+            # 倒计时结束动作
+            "countdown_action": "beep",  # 可选: 'beep' | 'sound' | 'flash' | 'notify'
+            # 音效文件设置
+            "sound_file": "sounds/Alarm01.wav",  # 默认音效
+            # 语言设置
+            "language": "zh_CN",
+            # 时钟模式设置
+            "clock_format_24h": True,  # 24小时制
+            "clock_show_seconds": True,  # 显示秒数
+            "clock_show_date": False,  # 显示日期
             # 12小时制时的 AM/PM 显示与样式
             "clock_show_am_pm": True,
             "clock_am_pm_style": "zh",  # 可选: 'en' | 'zh'
@@ -1414,7 +1428,7 @@ class TimerWindow(QMainWindow):
     def apply_settings(self):
         """应用设置"""
         # 应用字体
-        font = QFont(self.settings["font_family"], self.settings["font_size"], QFont.Bold)
+        font = QFont(self.settings.get("font_family", "Consolas"), self.settings.get("font_size", 96), QFont.Bold)
         self.time_label.setFont(font)
         
         # 应用颜色和透明度
@@ -1458,9 +1472,9 @@ class TimerWindow(QMainWindow):
             self.settings['timer_mode_key'] = mode_key
         print(f"[DEBUG] apply_settings: mode_key={mode_key}")
         if mode_key == 'countdown':
-            total_seconds = (self.settings["countdown_hours"] * 3600 + 
-                           self.settings["countdown_minutes"] * 60 + 
-                           self.settings["countdown_seconds"])
+            total_seconds = (self.settings.get("countdown_hours", 0) * 3600 + 
+                           self.settings.get("countdown_minutes", 25) * 60 + 
+                           self.settings.get("countdown_seconds", 0))
             self.elapsed_seconds = total_seconds
         else:
             # countup 或 clock 都从 0 开始显示（clock 模式不使用 elapsed_seconds）
