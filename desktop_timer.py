@@ -8,22 +8,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QSystemTrayIcon,
                              QPushButton, QSlider, QComboBox, QSpinBox, QCheckBox,
                              QGroupBox, QColorDialog, QFontDialog, QTabWidget,
                              QWidget, QMessageBox, QShortcut, QGridLayout, QFileDialog,
-                             QListWidget, QStyle, QScrollArea, QKeySequenceEdit)
+                             QListWidget, QStyle, QScrollArea, QKeySequenceEdit, QFormLayout)
+from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtGui import QIcon
-
-# 自定义可点击标签类
-class ClickableLabel(QLabel):
-    def __init__(self, text, url, parent=None):
-        super().__init__(text, parent)
-        self.url = url
-        self.parent_dialog = parent
-        self.setCursor(Qt.PointingHandCursor)
-        
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and self.parent_dialog:
-            self.parent_dialog.open_link(self.url)
 from PyQt5.QtCore import QTimer, Qt, QPoint, QUrl, QTranslator, QLocale
-from PyQt5.QtGui import QFont, QIcon, QColor, QKeySequence, QDesktopServices, QPixmap
+from PyQt5.QtGui import QFont, QIcon, QColor, QKeySequence
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 
@@ -69,6 +58,9 @@ DEFAULT_SHORTCUTS = {
     'open_settings': 'Ctrl+,',
     'lock_unlock': 'Ctrl+L',
 }
+
+APP_VERSION = "1.0.2"
+PROJECT_URL = "https://github.com/RE-TikaRa/DesktopTimer"
 
 
 class L18n:
@@ -177,6 +169,170 @@ class SettingsDialog(QDialog):
         
         layout.addLayout(button_layout)
         self.setLayout(layout)
+    
+    def create_about_tab(self):
+        """创建关于选项卡"""
+        # 创建滚动区域
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # 主容器
+        about_container = QWidget()
+        about_layout = QVBoxLayout()
+        about_container.setStyleSheet("""
+            QWidget {
+                background-color: #f8f9fa;
+                border-radius: 10px;
+                padding: 20px;
+            }
+        """)
+        
+        # ALP STUDIO LOGO
+        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(__file__)
+        logo_path = os.path.join(base_path, "img", "ALP_STUDIO-logo-full.svg")
+        if os.path.exists(logo_path):
+            logo_widget = QSvgWidget(logo_path)
+            # 设置更大的尺寸，保持logo原始比例
+            logo_widget.setFixedSize(340, 200)  # 按用户要求设置尺寸
+            logo_widget.setStyleSheet("background: transparent;")
+            
+            # 创建容器来居中logo
+            logo_container = QWidget()
+            logo_container.setStyleSheet("background: transparent;")
+            logo_layout = QHBoxLayout(logo_container)
+            logo_layout.addStretch()
+            logo_layout.addWidget(logo_widget)
+            logo_layout.addStretch()
+            logo_layout.setContentsMargins(0, 0, 0, 10)
+            
+            about_layout.addWidget(logo_container)
+        else:
+            # 备用emoji logo
+            logo_label = QLabel("🕒")
+            logo_label.setAlignment(Qt.AlignCenter)
+            logo_label.setStyleSheet("""
+                QLabel {
+                    font-size: 48px;
+                    margin-bottom: 10px;
+                    background: transparent;
+                }
+            """)
+            about_layout.addWidget(logo_label)
+        
+        # 应用名称
+        app_name = QLabel("DesktopTimer")
+        app_name.setAlignment(Qt.AlignCenter)
+        app_name.setStyleSheet("""
+            QLabel {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 5px;
+                background: transparent;
+            }
+        """)
+        about_layout.addWidget(app_name)
+        
+        # 副标题
+        subtitle = QLabel(self.tr('app_subtitle') if hasattr(self, 'tr') else "专注工作计时器 | 桌面效率工具")
+        subtitle.setAlignment(Qt.AlignCenter)
+        subtitle.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+                color: #7f8c8d;
+                margin-bottom: 20px;
+                background: transparent;
+            }
+        """)
+        about_layout.addWidget(subtitle)
+        
+        # 分割线
+        line = QLabel()
+        line.setFixedHeight(1)
+        line.setStyleSheet("background-color: #bdc3c7; margin: 10px 50px;")
+        about_layout.addWidget(line)
+        
+        # 信息区域
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(8)
+        
+        info_items = [
+            ("版本号", f"{APP_VERSION}", None),
+            ("作  者", "TikaRa", None),
+            ("邮  箱", "163mail@re-TikaRa.fun", "mailto:163mail@re-TikaRa.fun"),
+            ("个人网站", "re-tikara.fun", "https://re-tikara.fun"),
+            ("代码仓库", PROJECT_URL, PROJECT_URL),
+            ("B站主页", "夜雨安歌_TikaRa", "https://space.bilibili.com/374412219")
+        ]
+        
+        for label_text, value_text, link_url in info_items:
+            item_layout = QHBoxLayout()
+            
+            label = QLabel(f"{label_text}:")
+            label.setStyleSheet("""
+                QLabel {
+                    font-weight: bold;
+                    color: #34495e;
+                    background: transparent;
+                }
+            """)
+            label.setMinimumWidth(80)
+            
+            if link_url:
+                value = QLabel(f'<a href="{link_url}" style="color: #3498db; text-decoration: none;">{value_text}</a>')
+                value.setOpenExternalLinks(True)
+                value.setStyleSheet("""
+                    QLabel {
+                        color: #3498db;
+                        background: transparent;
+                    }
+                    QLabel:hover {
+                        text-decoration: underline;
+                    }
+                """)
+            else:
+                value = QLabel(value_text)
+                value.setStyleSheet("""
+                    QLabel {
+                        color: #2c3e50;
+                        background: transparent;
+                    }
+                """)
+            
+            item_layout.addWidget(label)
+            item_layout.addWidget(value)
+            item_layout.addStretch()
+            
+            info_layout.addLayout(item_layout)
+        
+        about_layout.addLayout(info_layout)
+        
+        # 底部空白
+        about_layout.addStretch()
+        
+        about_container.setLayout(about_layout)
+        layout.addWidget(about_container)
+        layout.addStretch()
+        
+        widget.setLayout(layout)
+        
+        # 设置滚动区域
+        scroll.setWidget(widget)
+        
+        # 创建包装器小部件
+        wrapper = QWidget()
+        wrapper_layout = QVBoxLayout()
+        wrapper_layout.addWidget(scroll)
+        wrapper.setLayout(wrapper_layout)
+        
+        return wrapper
         
     def create_appearance_tab(self):
         """创建外观设置选项卡"""
@@ -342,8 +498,24 @@ class SettingsDialog(QDialog):
         mode_label = QLabel(self.tr('mode') + ':')
         self.mode_combo = QComboBox()
         self.mode_combo.addItems([self.tr('count_up_mode'), self.tr('countdown_mode'), self.tr('clock_mode')])
-        current_mode = self.parent_window.settings["timer_mode"]
-        self.mode_combo.setCurrentText(current_mode)
+        # 根据语言无关的键设置选中项，兼容旧存储
+        def _derive_key(text: str) -> str:
+            if not isinstance(text, str):
+                return 'countdown'
+            text_l = text.lower()
+            if ('count up' in text_l) or ('正计时' in text) or (self.tr('count_up_mode') in text):
+                return 'countup'
+            if ('countdown' in text_l) or ('倒计时' in text) or (self.tr('countdown_mode') in text):
+                return 'countdown'
+            if ('clock' in text_l) or ('时钟' in text) or (self.tr('clock_mode') in text):
+                return 'clock'
+            return 'countdown'
+        key = self.parent_window.settings.get('timer_mode_key')
+        if not key:
+            key = _derive_key(self.parent_window.settings.get('timer_mode', ''))
+            self.parent_window.settings['timer_mode_key'] = key
+        index = {'countup': 0, 'countdown': 1, 'clock': 2}.get(key, 1)
+        self.mode_combo.setCurrentIndex(index)
         self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
         mode_select_layout.addWidget(mode_label)
         mode_select_layout.addWidget(self.mode_combo)
@@ -401,11 +573,17 @@ class SettingsDialog(QDialog):
         self.clock_widget = QWidget()
         clock_layout = QVBoxLayout()
         
-        # 时间格式
+        # 时间格式（24小时制 / 12小时制）
         format_layout = QHBoxLayout()
-        self.clock_24h_check = QCheckBox(self.tr('clock_24h_format'))
-        self.clock_24h_check.setChecked(self.parent_window.settings.get("clock_format_24h", True))
-        format_layout.addWidget(self.clock_24h_check)
+        format_label = QLabel(self.tr('time_format') + ':')
+        self.clock_format_combo = QComboBox()
+        self.clock_format_combo.addItems([
+            self.tr('clock_24h_format'),
+            self.tr('clock_12h_format') if 'clock_12h_format' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else ('12小时制' if self.tr('quit') == '退出' else '12-Hour Format'),
+        ])
+        self.clock_format_combo.setCurrentIndex(0 if self.parent_window.settings.get("clock_format_24h", True) else 1)
+        format_layout.addWidget(format_label)
+        format_layout.addWidget(self.clock_format_combo)
         format_layout.addStretch()
         clock_layout.addLayout(format_layout)
         
@@ -424,6 +602,56 @@ class SettingsDialog(QDialog):
         date_layout.addWidget(self.clock_date_check)
         date_layout.addStretch()
         clock_layout.addLayout(date_layout)
+
+        # 12小时制：显示 AM/PM/上午/下午 标签
+        ampm_layout = QHBoxLayout()
+        self.clock_am_pm_check = QCheckBox(self.tr('clock_show_am_pm'))
+        self.clock_am_pm_check.setChecked(self.parent_window.settings.get("clock_show_am_pm", True))
+        ampm_layout.addWidget(self.clock_am_pm_check)
+        ampm_layout.addStretch()
+        clock_layout.addLayout(ampm_layout)
+
+        # 12小时制：AM/PM 样式选择（en: AM/PM, zh: 上午/下午）
+        style_layout = QHBoxLayout()
+        style_label = QLabel(self.tr('clock_am_pm_style') + ':')
+        self.am_pm_style_combo = QComboBox()
+        self.am_pm_style_combo.addItems([
+            self.tr('am_pm_style_en') or 'AM/PM',
+            self.tr('am_pm_style_zh') or '上午/下午',
+        ])
+        current_style = self.parent_window.settings.get("clock_am_pm_style", "zh")
+        self.am_pm_style_combo.setCurrentIndex(0 if current_style == 'en' else 1)
+        style_layout.addWidget(style_label)
+        style_layout.addWidget(self.am_pm_style_combo)
+        style_layout.addStretch()
+        clock_layout.addLayout(style_layout)
+
+        # 12小时制：AM/PM 位置（时间前/时间后）
+        pos_layout = QHBoxLayout()
+        pos_label = QLabel(self.tr('clock_am_pm_position') + ':')
+        self.am_pm_pos_combo = QComboBox()
+        self.am_pm_pos_combo.addItems([
+            self.tr('am_pm_pos_before') or 'Before time',
+            self.tr('am_pm_pos_after') or 'After time',
+        ])
+        current_pos = self.parent_window.settings.get("clock_am_pm_position", "before")
+        self.am_pm_pos_combo.setCurrentIndex(0 if current_pos == 'before' else 1)
+        pos_layout.addWidget(pos_label)
+        pos_layout.addWidget(self.am_pm_pos_combo)
+        pos_layout.addStretch()
+        clock_layout.addLayout(pos_layout)
+
+        # 当切换24小时制时，禁用 AM/PM 相关配置
+        def _update_ampm_enabled():
+            is_24h = (self.clock_format_combo.currentIndex() == 0)
+            self.clock_am_pm_check.setEnabled(not is_24h)
+            # 仅当非24小时制且勾选显示上/下午时可编辑样式和位置
+            enable_detail = (not is_24h) and self.clock_am_pm_check.isChecked()
+            self.am_pm_style_combo.setEnabled(enable_detail)
+            self.am_pm_pos_combo.setEnabled(enable_detail)
+        self.clock_format_combo.currentIndexChanged.connect(lambda _: _update_ampm_enabled())
+        self.clock_am_pm_check.toggled.connect(lambda _: _update_ampm_enabled())
+        _update_ampm_enabled()
         
         self.clock_widget.setLayout(clock_layout)
         mode_layout.addWidget(self.clock_widget)
@@ -525,6 +753,40 @@ class SettingsDialog(QDialog):
         self.auto_start_check.setChecked(self.parent_window.settings.get("auto_start_timer", True))
         startup_layout.addWidget(self.auto_start_check)
         
+        # 启动模式行为设置
+        behavior_row = QHBoxLayout()
+        behavior_label = QLabel(self.tr('startup_mode_behavior') + ':')
+        self.startup_behavior_combo = QComboBox()
+        self.startup_behavior_combo.addItems([
+            LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}).get('startup_mode_restore_last', '恢复上次模式' if self.tr('quit') == '退出' else 'Restore last mode'),
+            LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}).get('startup_mode_fixed', '固定为指定模式' if self.tr('quit') == '退出' else 'Always use fixed mode'),
+        ])
+        self.startup_behavior_combo.setCurrentIndex(0 if self.parent_window.settings.get('startup_mode_behavior', 'restore') == 'restore' else 1)
+        behavior_row.addWidget(behavior_label)
+        behavior_row.addWidget(self.startup_behavior_combo)
+        behavior_row.addStretch()
+        startup_layout.addLayout(behavior_row)
+        
+        fixed_row = QHBoxLayout()
+        fixed_label = QLabel(self.tr('startup_fixed_mode') + ':')
+        self.startup_fixed_combo = QComboBox()
+        self.startup_fixed_combo.addItems([
+            self.tr('count_up_mode'),
+            self.tr('countdown_mode'),
+            self.tr('clock_mode'),
+        ])
+        fixed_map = {'countup': 0, 'countdown': 1, 'clock': 2}
+        self.startup_fixed_combo.setCurrentIndex(fixed_map.get(self.parent_window.settings.get('startup_fixed_mode_key', 'countdown'), 1))
+        fixed_row.addWidget(fixed_label)
+        fixed_row.addWidget(self.startup_fixed_combo)
+        fixed_row.addStretch()
+        startup_layout.addLayout(fixed_row)
+        
+        def _update_fixed_enabled():
+            self.startup_fixed_combo.setEnabled(self.startup_behavior_combo.currentIndex() == 1)
+        self.startup_behavior_combo.currentIndexChanged.connect(lambda _: _update_fixed_enabled())
+        _update_fixed_enabled()
+        
         startup_group.setLayout(startup_layout)
         layout.addWidget(startup_group)
         
@@ -564,7 +826,7 @@ class SettingsDialog(QDialog):
         folder_btn.clicked.connect(self.open_sound_folder)
         test_btn = QPushButton(self.tr('test_sound'))
         test_btn.clicked.connect(self.test_sound)
-        random_btn = QPushButton('🎲 随机' if self.tr('quit') == '退出' else '🎲 Random')
+        random_btn = QPushButton('随机' if self.tr('quit') == '退出' else 'Random')
         random_btn.clicked.connect(self.random_sound)
         folder_layout.addWidget(folder_btn)
         folder_layout.addWidget(test_btn)
@@ -612,182 +874,10 @@ class SettingsDialog(QDialog):
 
         shortcut_group.setLayout(shortcut_layout)
         layout.addWidget(shortcut_group)
-        
+
         layout.addStretch()
         widget.setLayout(layout)
         return widget
-        
-    def create_about_tab(self):
-        """创建关于选项卡"""
-        # 创建滚动区域
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        
-        widget = QWidget()
-        layout = QVBoxLayout()
-        
-        # 主容器
-        about_container = QWidget()
-        about_layout = QVBoxLayout()
-        about_container.setStyleSheet("""
-            QWidget {
-                background-color: #f8f9fa;
-                border-radius: 10px;
-                padding: 20px;
-            }
-        """)
-        
-        # ALP STUDIO LOGO
-        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
-        if getattr(sys, 'frozen', False):
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.dirname(__file__)
-        logo_path = os.path.join(base_path, "img", "ALP_STUDIO-logo-full.svg")
-        if os.path.exists(logo_path):
-            logo_widget = QSvgWidget(logo_path)
-            # 设置更大的尺寸，保持logo原始比例
-            logo_widget.setFixedSize(340, 200)  # 按用户要求设置尺寸
-            logo_widget.setStyleSheet("background: transparent;")
-            
-            # 创建容器来居中logo
-            logo_container = QWidget()
-            logo_container.setStyleSheet("background: transparent;")
-            logo_layout = QHBoxLayout(logo_container)
-            logo_layout.addStretch()
-            logo_layout.addWidget(logo_widget)
-            logo_layout.addStretch()
-            logo_layout.setContentsMargins(0, 0, 0, 10)
-            
-            about_layout.addWidget(logo_container)
-        else:
-            # 备用emoji logo
-            logo_label = QLabel("🕒")
-            logo_label.setAlignment(Qt.AlignCenter)
-            logo_label.setStyleSheet("""
-                QLabel {
-                    font-size: 48px;
-                    margin-bottom: 10px;
-                    background: transparent;
-                }
-            """)
-            about_layout.addWidget(logo_label)
-        
-        # 应用名称
-        app_name = QLabel("DesktopTimer")
-        app_name.setAlignment(Qt.AlignCenter)
-        app_name.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2c3e50;
-                margin-bottom: 5px;
-                background: transparent;
-            }
-        """)
-        about_layout.addWidget(app_name)
-        
-        # 副标题
-        subtitle = QLabel(self.tr('app_subtitle') if hasattr(self, 'tr') else "专注工作计时器 | 桌面效率工具")
-        subtitle.setAlignment(Qt.AlignCenter)
-        subtitle.setStyleSheet("""
-            QLabel {
-                font-size: 14px;
-                color: #7f8c8d;
-                margin-bottom: 20px;
-                background: transparent;
-            }
-        """)
-        about_layout.addWidget(subtitle)
-        
-        # 分割线
-        line = QLabel()
-        line.setFixedHeight(1)
-        line.setStyleSheet("background-color: #bdc3c7; margin: 10px 50px;")
-        about_layout.addWidget(line)
-        
-        # 信息区域
-        info_layout = QVBoxLayout()
-        info_layout.setSpacing(8)
-        
-        info_items = [
-            ("版本号", "1.0.2", None),
-            ("作者", "TikaRa", None),
-            ("邮箱", "163mail@re-TikaRa.fun", "mailto:163mail@re-TikaRa.fun"),
-            ("个人网站", "re-tikara.fun", "https://re-tikara.fun"),
-            ("代码仓库", "https://github.com/RE-TikaRa/DesktopTimer", "https://github.com/RE-TikaRa/DesktopTimer"),
-            ("B站主页", "夜雨安歌_TikaRa", "https://space.bilibili.com/374412219")
-        ]
-        
-        for label_text, value_text, link_url in info_items:
-            item_layout = QHBoxLayout()
-            
-            label = QLabel(f"{label_text}:")
-            label.setStyleSheet("""
-                QLabel {
-                    font-weight: bold;
-                    color: #34495e;
-                    min-width: 80px;
-                    background: transparent;
-                }
-            """)
-            
-            # 如果有链接，使用可点击标签
-            if link_url:
-                value = ClickableLabel(value_text, link_url, self)
-                value.setStyleSheet("""
-                    QLabel {
-                        color: #3498db;
-                        background: transparent;
-                    }
-                    QLabel:hover {
-                        color: #2980b9;
-                        text-decoration: underline;
-                    }
-                """)
-            else:
-                value = QLabel(value_text)
-                value.setStyleSheet("""
-                    QLabel {
-                        color: #2c3e50;
-                        background: transparent;
-                    }
-                """)
-            
-            item_layout.addWidget(label)
-            item_layout.addWidget(value)
-            item_layout.addStretch()
-            
-            info_layout.addLayout(item_layout)
-        
-        about_layout.addLayout(info_layout)
-        
-        # 底部空白
-        about_layout.addStretch()
-        
-        about_container.setLayout(about_layout)
-        layout.addWidget(about_container)
-        layout.addStretch()
-        
-        widget.setLayout(layout)
-        
-        # 设置滚动区域
-        scroll.setWidget(widget)
-        
-        # 创建包装器小部件
-        wrapper = QWidget()
-        wrapper_layout = QVBoxLayout()
-        wrapper_layout.addWidget(scroll)
-        wrapper.setLayout(wrapper_layout)
-        
-        return wrapper
-        
-    def open_link(self, url):
-        """打开链接"""
-        try:
-            QDesktopServices.openUrl(QUrl(url))
-        except Exception as e:
-            QMessageBox.warning(self, "错误", f"无法打开链接: {str(e)}")
         
     def on_mode_changed(self, mode):
         """模式改变时的处理"""
@@ -968,19 +1058,29 @@ class SettingsDialog(QDialog):
         self.parent_window.settings["bg_opacity"] = self.opacity_slider.value()
         self.parent_window.settings["night_mode"] = self.night_mode_check.isChecked()
         self.parent_window.settings["timer_mode"] = self.mode_combo.currentText()
+        # 保存语言无关的键
+        self.parent_window.settings["timer_mode_key"] = {0: 'countup', 1: 'countdown', 2: 'clock'}.get(self.mode_combo.currentIndex(), 'countdown')
         self.parent_window.settings["countdown_hours"] = self.hours_spin.value()
         self.parent_window.settings["countdown_minutes"] = self.minutes_spin.value()
         self.parent_window.settings["countdown_seconds"] = self.seconds_spin.value()
         self.parent_window.settings["countdown_action"] = self.countdown_action.currentText()
-        self.parent_window.settings["clock_format_24h"] = self.clock_24h_check.isChecked()
+        # 时间格式：索引0为24小时制，1为12小时制
+        self.parent_window.settings["clock_format_24h"] = (self.clock_format_combo.currentIndex() == 0)
         self.parent_window.settings["clock_show_seconds"] = self.clock_seconds_check.isChecked()
         self.parent_window.settings["clock_show_date"] = self.clock_date_check.isChecked()
+        self.parent_window.settings["clock_show_am_pm"] = self.clock_am_pm_check.isChecked()
+        self.parent_window.settings["clock_am_pm_style"] = 'en' if self.am_pm_style_combo.currentIndex() == 0 else 'zh'
+        self.parent_window.settings["clock_am_pm_position"] = 'before' if self.am_pm_pos_combo.currentIndex() == 0 else 'after'
         self.parent_window.settings["language"] = "zh_CN" if self.lang_combo.currentText() == "简体中文" else "en_US"
         self.parent_window.settings["auto_start_timer"] = self.auto_start_check.isChecked()
         self.parent_window.settings["rounded_corners"] = self.rounded_check.isChecked()
         self.parent_window.settings["corner_radius"] = self.radius_spin.value()
         self.parent_window.settings["enable_sound"] = self.enable_sound_check.isChecked()
         self.parent_window.settings["enable_popup"] = self.enable_popup_check.isChecked()
+        
+        # 保存启动模式行为
+        self.parent_window.settings['startup_mode_behavior'] = 'restore' if self.startup_behavior_combo.currentIndex() == 0 else 'fixed'
+        self.parent_window.settings['startup_fixed_mode_key'] = {0: 'countup', 1: 'countdown', 2: 'clock'}.get(self.startup_fixed_combo.currentIndex(), 'countdown')
 
         # 保存快捷键到设置
         shortcuts_saved = dict(self.parent_window.settings.get('shortcuts', {}))
@@ -1020,6 +1120,23 @@ class TimerWindow(QMainWindow):
         super().__init__()
         self.l18n = L18n(lang_code=self.get_language())
         self.load_settings()
+        # 启动时根据设置决定初始模式
+        try:
+            behavior = self.settings.get('startup_mode_behavior', 'restore')
+            if behavior == 'fixed':
+                fixed_key = self.settings.get('startup_fixed_mode_key', 'countdown')
+                if fixed_key not in ('countup', 'countdown', 'clock'):
+                    fixed_key = 'countdown'
+                self.settings['timer_mode_key'] = fixed_key
+                # 同步可读文本（仅用于 UI 展示，不参与逻辑判断）
+                key_to_text = {
+                    'countup': self.tr('count_up_mode'),
+                    'countdown': self.tr('countdown_mode'),
+                    'clock': self.tr('clock_mode'),
+                }
+                self.settings['timer_mode'] = key_to_text.get(fixed_key, self.tr('countdown_mode'))
+        except Exception as _e:
+            print(f"[DEBUG] enforce startup mode failed: {_e}")
         self.elapsed_seconds = 0
         self.is_running = self.settings.get("auto_start_timer", False)
         self.is_flashing = False
@@ -1074,6 +1191,11 @@ class TimerWindow(QMainWindow):
         
         settings_dir = os.path.join(base_path, "settings")
         self.settings_file = os.path.join(settings_dir, "timer_settings.json")
+        # 调试：打印设置文件路径
+        try:
+            print(f"[DEBUG] settings file: {self.settings_file}")
+        except Exception:
+            pass
         
         default_settings = {
             "font_family": "Consolas",
@@ -1083,20 +1205,15 @@ class TimerWindow(QMainWindow):
             "bg_opacity": 200,
             "night_mode": False,
             "timer_mode": "倒计时",  # 默认倒计时模式
-            "countdown_hours": 0,
-            "countdown_minutes": 25,
-            "countdown_seconds": 0,
-            "countdown_action": "提示音+闪烁",
-            "language": "zh_CN",
-            "auto_start_timer": False,
-            "rounded_corners": True,
-            "corner_radius": 15,
-            "enable_sound": True,
-            "enable_popup": True,
-            "sound_file": "",
-            "clock_format_24h": True,  # 时钟模式：24小时制
-            "clock_show_seconds": True,  # 时钟模式：显示秒
-            "clock_show_date": True,  # 时钟模式：显示日期
+            # 语言无关的计时模式键（与 timer_mode 文本解耦）
+            "timer_mode_key": "countdown",  # 可选: 'countup' | 'countdown' | 'clock'
+            # 12小时制时的 AM/PM 显示与样式
+            "clock_show_am_pm": True,
+            "clock_am_pm_style": "zh",  # 可选: 'en' | 'zh'
+            "clock_am_pm_position": "before",  # 可选: 'before' | 'after'
+            # 启动行为：恢复上次/固定模式
+            "startup_mode_behavior": "restore",  # 可选: 'restore' | 'fixed'
+            "startup_fixed_mode_key": "countdown",  # 固定模式键
             # 自定义快捷键（如 settings 中不存在，则使用默认）
             "shortcuts": dict(DEFAULT_SHORTCUTS),
         }
@@ -1105,6 +1222,10 @@ class TimerWindow(QMainWindow):
             try:
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
                     self.settings = json.load(f)
+                try:
+                    print(f"[DEBUG] loaded timer_mode_key={self.settings.get('timer_mode_key')} timer_mode={self.settings.get('timer_mode')}")
+                except Exception:
+                    pass
                 # 确保所有键都存在
                 for key, value in default_settings.items():
                     if key not in self.settings:
@@ -1116,6 +1237,26 @@ class TimerWindow(QMainWindow):
                     merged = dict(DEFAULT_SHORTCUTS)
                     merged.update(self.settings['shortcuts'])
                     self.settings['shortcuts'] = merged
+
+                # 兼容旧版本：若没有 language-independent 模式键，则根据旧的文本推断
+                if 'timer_mode_key' not in self.settings:
+                    def _derive_key(text: str) -> str:
+                        if not isinstance(text, str):
+                            return 'countdown'
+                        tl = text.lower()
+                        if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
+                            return 'countup'
+                        if ('countdown' in tl) or ('倒计时' in text) or (self.tr('countdown_mode') in text):
+                            return 'countdown'
+                        if ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
+                            return 'clock'
+                        return 'countdown'
+                    self.settings['timer_mode_key'] = _derive_key(self.settings.get('timer_mode', ''))
+                    # 可选立即保存，确保后续启动稳定
+                    try:
+                        self.save_settings()
+                    except Exception:
+                        pass
                 
                 # 兼容旧版本：将绝对路径转换为相对路径
                 if "sound_file" in self.settings and self.settings["sound_file"]:
@@ -1302,14 +1443,27 @@ class TimerWindow(QMainWindow):
             }}
         """)
         
-        # 重置计时器根据模式
-        mode = self.settings["timer_mode"]
-        if self.tr('countdown_mode') in mode or '倒计时' in mode:
+        # 重置计时器根据模式键（语言无关）
+        mode_key = self.settings.get('timer_mode_key')
+        if not mode_key:
+            # 兜底：从旧文本推断
+            text = self.settings.get('timer_mode', '')
+            tl = text.lower() if isinstance(text, str) else ''
+            if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
+                mode_key = 'countup'
+            elif ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
+                mode_key = 'clock'
+            else:
+                mode_key = 'countdown'
+            self.settings['timer_mode_key'] = mode_key
+        print(f"[DEBUG] apply_settings: mode_key={mode_key}")
+        if mode_key == 'countdown':
             total_seconds = (self.settings["countdown_hours"] * 3600 + 
                            self.settings["countdown_minutes"] * 60 + 
                            self.settings["countdown_seconds"])
             self.elapsed_seconds = total_seconds
         else:
+            # countup 或 clock 都从 0 开始显示（clock 模式不使用 elapsed_seconds）
             self.elapsed_seconds = 0
             
         self.update_time()
@@ -1466,10 +1620,25 @@ class TimerWindow(QMainWindow):
         
     def update_time(self):
         """更新时间显示"""
-        mode = self.settings["timer_mode"]
+        # 使用 language-independent 模式键
+        mode_key = self.settings.get('timer_mode_key')
+        if not mode_key:
+            text = self.settings.get('timer_mode', '')
+            tl = text.lower() if isinstance(text, str) else ''
+            if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
+                mode_key = 'countup'
+            elif ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
+                mode_key = 'clock'
+            else:
+                mode_key = 'countdown'
+            self.settings['timer_mode_key'] = mode_key
         
         # 时钟模式
-        if self.tr('clock_mode') in mode or '时钟' in mode:
+        # 调试首帧输出当前模式
+        if not hasattr(self, '_dbg_printed'):
+            print(f"[DEBUG] update_time: mode_key={mode_key}")
+            self._dbg_printed = True
+        if mode_key == 'clock':
             from PyQt5.QtCore import QDateTime
             current_time = QDateTime.currentDateTime()
             
@@ -1483,11 +1652,19 @@ class TimerWindow(QMainWindow):
                     else:
                         time_str = current_time.toString("yyyy-MM-dd HH:mm")
                 else:
-                    # 12小时制带日期
-                    if self.settings.get("clock_show_seconds", True):
-                        time_str = current_time.toString("yyyy-MM-dd hh:mm:ss AP")
+                    # 12小时制带日期：指示符应贴近时间，不要出现在日期前
+                    date_part = current_time.toString("yyyy-MM-dd")
+                    time_part = current_time.toString("hh:mm:ss") if self.settings.get("clock_show_seconds", True) else current_time.toString("hh:mm")
+                    if self.settings.get("clock_show_am_pm", True):
+                        ampm_style = self.settings.get("clock_am_pm_style", "zh")
+                        ap = current_time.toString("AP")
+                        is_pm = (ap.upper().endswith('P'))
+                        indicator = ('PM' if is_pm else 'AM') if ampm_style == 'en' else ('下午' if is_pm else '上午')
+                        pos = self.settings.get("clock_am_pm_position", "before")
+                        time_with_indicator = f"{indicator} {time_part}" if pos == 'before' else f"{time_part} {indicator}"
                     else:
-                        time_str = current_time.toString("yyyy-MM-dd hh:mm AP")
+                        time_with_indicator = time_part
+                    time_str = f"{date_part} {time_with_indicator}"
             else:
                 # 不显示日期
                 if self.settings.get("clock_format_24h", True):
@@ -1499,16 +1676,26 @@ class TimerWindow(QMainWindow):
                 else:
                     # 12小时制
                     if self.settings.get("clock_show_seconds", True):
-                        time_str = current_time.toString("hh:mm:ss AP")
+                        base = current_time.toString("hh:mm:ss")
                     else:
-                        time_str = current_time.toString("hh:mm AP")
+                        base = current_time.toString("hh:mm")
+                    # 是否显示 AM/PM 指示
+                    if self.settings.get("clock_show_am_pm", True):
+                        ampm_style = self.settings.get("clock_am_pm_style", "zh")
+                        ap = current_time.toString("AP")
+                        is_pm = (ap.upper().endswith('P'))
+                        indicator = ('PM' if is_pm else 'AM') if ampm_style == 'en' else ('下午' if is_pm else '上午')
+                        pos = self.settings.get("clock_am_pm_position", "before")
+                        time_str = f"{indicator} {base}" if pos == 'before' else f"{base} {indicator}"
+                    else:
+                        time_str = base
             
             self.time_label.setText(time_str)
             
         # 计时器模式
         else:
             if self.is_running:
-                if self.tr('countdown_mode') in mode or '倒计时' in mode:
+                if mode_key == 'countdown':
                     self.elapsed_seconds -= 1
                     if self.elapsed_seconds <= 0:
                         self.elapsed_seconds = 0
@@ -1663,8 +1850,18 @@ class TimerWindow(QMainWindow):
     
     def reset_timer(self):
         """重置计时：倒计时回到初始设置，正计时归零"""
-        mode = self.settings.get("timer_mode", "倒计时")
-        if self.tr('countdown_mode') in mode or '倒计时' in mode:
+        mode_key = self.settings.get('timer_mode_key')
+        if not mode_key:
+            text = self.settings.get('timer_mode', '')
+            tl = text.lower() if isinstance(text, str) else ''
+            if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
+                mode_key = 'countup'
+            elif ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
+                mode_key = 'clock'
+            else:
+                mode_key = 'countdown'
+            self.settings['timer_mode_key'] = mode_key
+        if mode_key == 'countdown':
             hours = self.settings.get("countdown_hours", 0)
             minutes = self.settings.get("countdown_minutes", 0)
             seconds = self.settings.get("countdown_seconds", 0)
@@ -1688,6 +1885,7 @@ class TimerWindow(QMainWindow):
     def quick_countdown(self, hours, minutes, seconds):
         """快速设置倒计时"""
         self.settings["timer_mode"] = self.tr('countdown_mode')
+        self.settings["timer_mode_key"] = 'countdown'
         self.settings["countdown_hours"] = hours
         self.settings["countdown_minutes"] = minutes
         self.settings["countdown_seconds"] = seconds
@@ -1862,6 +2060,7 @@ class TimerWindow(QMainWindow):
     def switch_to_count_up(self):
         """切换到正计时"""
         self.settings["timer_mode"] = self.tr('count_up_mode')
+        self.settings["timer_mode_key"] = 'countup'
         self.save_settings()
         self.reset_timer()
             
