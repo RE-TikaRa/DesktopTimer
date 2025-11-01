@@ -63,6 +63,23 @@ APP_VERSION = "1.0.2"
 PROJECT_URL = "https://github.com/RE-TikaRa/DesktopTimer"
 
 
+class TimerConstants:
+    """定时器相关常量"""
+    # 定时器间隔(毫秒)
+    TIMER_UPDATE_INTERVAL = 1000  # 主定时器更新间隔：每秒
+    FLASH_INTERVAL = 500  # 闪烁切换间隔：每0.5秒
+    
+    # 闪烁次数
+    FLASH_COUNT_MAX = 6  # 闪烁6次状态切换 = 3次完整闪烁
+    
+    # 通知持续时间(秒)
+    NOTIFICATION_DURATION_SHORT = 3  # 短通知：3秒
+    NOTIFICATION_DURATION_LONG = 5  # 长通知：5秒
+    
+    # 托盘通知持续时间(毫秒)
+    TRAY_MESSAGE_DURATION = 1000  # 托盘消息持续1秒
+
+
 class L18n:
     def __init__(self, lang_code='zh_CN'):
         self.lang_code = lang_code
@@ -499,20 +516,9 @@ class SettingsDialog(QDialog):
         self.mode_combo = QComboBox()
         self.mode_combo.addItems([self.tr('count_up_mode'), self.tr('countdown_mode'), self.tr('clock_mode')])
         # 根据语言无关的键设置选中项，兼容旧存储
-        def _derive_key(text: str) -> str:
-            if not isinstance(text, str):
-                return 'countdown'
-            text_l = text.lower()
-            if ('count up' in text_l) or ('正计时' in text) or (self.tr('count_up_mode') in text):
-                return 'countup'
-            if ('countdown' in text_l) or ('倒计时' in text) or (self.tr('countdown_mode') in text):
-                return 'countdown'
-            if ('clock' in text_l) or ('时钟' in text) or (self.tr('clock_mode') in text):
-                return 'clock'
-            return 'countdown'
         key = self.parent_window.settings.get('timer_mode_key')
         if not key:
-            key = _derive_key(self.parent_window.settings.get('timer_mode', ''))
+            key = TimerWindow.derive_mode_key(self.parent_window.settings.get('timer_mode', ''))
             self.parent_window.settings['timer_mode_key'] = key
         index = {'countup': 0, 'countdown': 1, 'clock': 2}.get(key, 1)
         self.mode_combo.setCurrentIndex(index)
@@ -704,7 +710,7 @@ class SettingsDialog(QDialog):
             if hours == -1:  # 自定义按钮
                 btn.clicked.connect(self.show_custom_preset)
             else:
-                btn.clicked.connect(lambda checked, h=hours, m=minutes, s=seconds: 
+                btn.clicked.connect(lambda _, h=hours, m=minutes, s=seconds: 
                                   self.apply_preset(h, m, s))
             grid_layout.addWidget(btn, row, col)
             col += 1
@@ -1052,6 +1058,42 @@ class SettingsDialog(QDialog):
                 self.tr('no_sound_files_found'),
                 self.tr('no_sound_files_msg')
             )
+    
+    def _validate_shortcuts(self):
+        """验证快捷键是否有冲突"""
+        if not hasattr(self, 'shortcut_edits'):
+            return True
+        
+        used_keys = {}
+        conflicts = []
+        
+        for name, editor in self.shortcut_edits.items():
+            seq = editor.keySequence().toString()
+            if not seq:  # 空快捷键跳过
+                continue
+            if seq in used_keys:
+                # 翻译键名
+                name_map = {
+                    'pause_resume': self.tr('shortcut_pause'),
+                    'reset': self.tr('shortcut_reset'),
+                    'show_hide': self.tr('shortcut_hide'),
+                    'open_settings': self.tr('shortcut_settings'),
+                    'lock_unlock': self.tr('shortcut_lock'),
+                }
+                conflicts.append((name_map.get(name, name), 
+                                name_map.get(used_keys[seq], used_keys[seq]), 
+                                seq))
+            else:
+                used_keys[seq] = name
+        
+        if conflicts:
+            # 显示冲突警告
+            msg_text = (self.tr('shortcut_conflict_title') if 'shortcut_conflict_title' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) 
+                       else '快捷键冲突' if self.tr('quit') == '退出' else 'Shortcut Conflict')
+            msg_detail = '\n'.join([f"{key}: {old} ⚠ {new}" for new, old, key in conflicts])
+            QMessageBox.warning(self, msg_text, msg_detail)
+            return False
+        return True
         
     def apply_settings(self):
         """应用设置"""
@@ -1107,10 +1149,13 @@ class SettingsDialog(QDialog):
             self.parent_window.reload_shortcuts()
         except Exception:
             pass
-        self.parent_window.save_settings()
+        self.parent_window.save_settings(immediate=True)  # 用户主动保存，立即执行
         
     def accept_settings(self):
-        """确定设置"""
+        """确定设置（带快捷键冲突检测）"""
+        # 先验证快捷键
+        if not self._validate_shortcuts():
+            return  # 有冲突，不保存
         self.apply_settings()
         self.accept()
 
@@ -1118,6 +1163,9 @@ class SettingsDialog(QDialog):
 class TimerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        # 计算基础路径（一次性，避免重复）
+        self.base_path = self._get_base_path()
+        
         self.l18n = L18n(lang_code=self.get_language())
         self.load_settings()
         # 启动时根据设置决定初始模式
@@ -1141,15 +1189,18 @@ class TimerWindow(QMainWindow):
         self.is_running = self.settings.get("auto_start_timer", False)
         self.is_flashing = False
         self.is_locked = False  # 窗口锁定状态
+        self.last_displayed_text = ""  # 缓存上一次显示的文本，用于优化窗口大小调整
         self.media_player = QMediaPlayer()
         
+        # 延迟保存机制
+        self._pending_save = False  # 标记是否有待保存的设置
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)  # 单次触发
+        self._save_timer.timeout.connect(self._do_save_settings)
+        self._save_delay_ms = 1000  # 延迟1秒保存
+        
         # 设置窗口图标
-        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
-        if getattr(sys, 'frozen', False):
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.dirname(__file__)
-        icon_path = os.path.join(base_path, "img", "timer_icon.ico")
+        icon_path = self.get_resource_path("img", "timer_icon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
@@ -1159,17 +1210,58 @@ class TimerWindow(QMainWindow):
         self.init_shortcuts()
         self.apply_settings()
         self.ensure_sounds_folder()
+    
+    @staticmethod
+    def _get_base_path():
+        """获取应用程序基础路径"""
+        if getattr(sys, 'frozen', False):
+            return os.path.dirname(sys.executable)
+        else:
+            return os.path.dirname(os.path.abspath(__file__))
+    
+    def get_resource_path(self, *paths):
+        """
+        获取资源文件路径
+        
+        Args:
+            *paths: 路径组件，例如 'img', 'timer_icon.ico'
+            
+        Returns:
+            完整的资源文件路径
+        """
+        return os.path.join(self.base_path, *paths)
+    
+    @staticmethod
+    def derive_mode_key(mode_text):
+        """
+        从模式文本推断语言无关的模式键
+        
+        Args:
+            mode_text: 模式文本（可能是中文或英文）
+            
+        Returns:
+            'countup' | 'countdown' | 'clock'
+        """
+        if not isinstance(mode_text, str):
+            return 'countdown'
+        
+        text_lower = mode_text.lower()
+        
+        # 正计时判断
+        if any(keyword in text_lower for keyword in ['count up', '正计时']):
+            return 'countup'
+        
+        # 时钟判断
+        if any(keyword in text_lower for keyword in ['clock', '时钟']):
+            return 'clock'
+        
+        # 默认倒计时
+        return 'countdown'
         
     def get_language(self):
-        # 从设置获取语言代码
+        """从设置获取语言代码"""
         try:
-            # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
-            if getattr(sys, 'frozen', False):
-                base_path = os.path.dirname(sys.executable)
-            else:
-                base_path = os.path.dirname(__file__)
-            
-            settings_path = os.path.join(base_path, "settings", "timer_settings.json")
+            settings_path = self.get_resource_path("settings", "timer_settings.json")
             with open(settings_path, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
             return settings.get('language', 'zh_CN')
@@ -1181,15 +1273,7 @@ class TimerWindow(QMainWindow):
         
     def load_settings(self):
         """加载设置"""
-        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
-        if getattr(sys, 'frozen', False):
-            # 打包后的 exe
-            base_path = os.path.dirname(sys.executable)
-        else:
-            # 开发环境
-            base_path = os.path.dirname(__file__)
-        
-        settings_dir = os.path.join(base_path, "settings")
+        settings_dir = self.get_resource_path("settings")
         self.settings_file = os.path.join(settings_dir, "timer_settings.json")
         # 调试：打印设置文件路径
         try:
@@ -1254,21 +1338,10 @@ class TimerWindow(QMainWindow):
 
                 # 兼容旧版本：若没有 language-independent 模式键，则根据旧的文本推断
                 if 'timer_mode_key' not in self.settings:
-                    def _derive_key(text: str) -> str:
-                        if not isinstance(text, str):
-                            return 'countdown'
-                        tl = text.lower()
-                        if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
-                            return 'countup'
-                        if ('countdown' in tl) or ('倒计时' in text) or (self.tr('countdown_mode') in text):
-                            return 'countdown'
-                        if ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
-                            return 'clock'
-                        return 'countdown'
-                    self.settings['timer_mode_key'] = _derive_key(self.settings.get('timer_mode', ''))
-                    # 可选立即保存，确保后续启动稳定
+                    self.settings['timer_mode_key'] = self.derive_mode_key(self.settings.get('timer_mode', ''))
+                    # 立即保存，确保后续启动稳定
                     try:
-                        self.save_settings()
+                        self.save_settings(immediate=True)
                     except Exception:
                         pass
                 
@@ -1278,12 +1351,12 @@ class TimerWindow(QMainWindow):
                     # 如果是绝对路径，尝试转换为相对路径
                     if os.path.isabs(sound_file):
                         try:
-                            rel_path = os.path.relpath(sound_file, base_path)
+                            rel_path = os.path.relpath(sound_file, self.base_path)
                             # 如果文件在 sounds 文件夹内，转换为相对路径
                             if rel_path.startswith('sounds') and os.path.exists(sound_file):
                                 self.settings["sound_file"] = rel_path
                                 # 立即保存转换后的设置
-                                self.save_settings()
+                                self.save_settings(immediate=True)
                                 print(f"[兼容] 已将声音文件路径从绝对路径转换为相对路径: {rel_path}")
                         except (ValueError, OSError):
                             # 转换失败，保持原样
@@ -1299,9 +1372,96 @@ class TimerWindow(QMainWindow):
             self.settings['shortcuts'] = merged
         except Exception:
             self.settings['shortcuts'] = dict(DEFAULT_SHORTCUTS)
+        
+        # 验证并修正设置
+        self._validate_and_fix_settings()
             
-    def save_settings(self):
-        """保存设置"""
+    def _validate_and_fix_settings(self):
+        """验证设置值的有效性,并修正无效的设置"""
+        fixed = False
+        
+        # 验证字体大小
+        font_size = self.settings.get("font_size", 96)
+        if not isinstance(font_size, int) or font_size < 12 or font_size > 500:
+            self.settings["font_size"] = 96
+            fixed = True
+            
+        # 验证背景透明度
+        bg_opacity = self.settings.get("bg_opacity", 200)
+        if not isinstance(bg_opacity, int) or bg_opacity < 0 or bg_opacity > 255:
+            self.settings["bg_opacity"] = 200
+            fixed = True
+            
+        # 验证定时器模式键
+        mode_key = self.settings.get("timer_mode_key")
+        if mode_key not in ('countup', 'countdown', 'clock'):
+            self.settings["timer_mode_key"] = 'countdown'
+            fixed = True
+            
+        # 验证倒计时时间设置
+        for key in ['countdown_hours', 'countdown_minutes', 'countdown_seconds']:
+            value = self.settings.get(key, 0)
+            if not isinstance(value, int) or value < 0:
+                self.settings[key] = 0
+                fixed = True
+        
+        # 验证倒计时小时和分钟的合理范围
+        if self.settings.get("countdown_hours", 0) > 99:
+            self.settings["countdown_hours"] = 99
+            fixed = True
+        if self.settings.get("countdown_minutes", 0) > 59:
+            self.settings["countdown_minutes"] = 59
+            fixed = True
+        if self.settings.get("countdown_seconds", 0) > 59:
+            self.settings["countdown_seconds"] = 59
+            fixed = True
+            
+        # 验证颜色格式
+        for color_key in ['text_color', 'bg_color']:
+            color = self.settings.get(color_key, '#000000')
+            if not isinstance(color, str) or not color.startswith('#') or len(color) != 7:
+                default_colors = {'text_color': '#E0E0E0', 'bg_color': '#1E1E1E'}
+                self.settings[color_key] = default_colors[color_key]
+                fixed = True
+                
+        # 验证语言设置
+        language = self.settings.get("language")
+        if language not in ('zh_CN', 'en_US'):
+            self.settings["language"] = 'zh_CN'
+            fixed = True
+            
+        # 验证启动模式行为
+        startup_behavior = self.settings.get("startup_mode_behavior")
+        if startup_behavior not in ('restore', 'fixed'):
+            self.settings["startup_mode_behavior"] = 'restore'
+            fixed = True
+            
+        # 如果修正了任何设置,立即保存
+        if fixed:
+            print("[验证] 检测到无效的设置值,已自动修正")
+            self.save_settings(immediate=True)
+    
+    def save_settings(self, immediate=False):
+        """
+        延迟保存设置（防抖动）
+        
+        Args:
+            immediate: 是否立即保存，跳过延迟机制
+        """
+        if immediate:
+            # 立即保存
+            self._do_save_settings()
+        else:
+            # 标记有待保存的设置，并重启定时器
+            self._pending_save = True
+            self._save_timer.stop()  # 停止之前的定时器
+            self._save_timer.start(self._save_delay_ms)  # 重新开始计时
+    
+    def _do_save_settings(self):
+        """实际执行保存设置"""
+        if not self._pending_save:
+            return
+            
         try:
             # 确保 settings 目录存在
             settings_dir = os.path.dirname(self.settings_file)
@@ -1310,8 +1470,11 @@ class TimerWindow(QMainWindow):
             
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=4, ensure_ascii=False)
+            
+            self._pending_save = False
+            print("[保存] 设置已保存")
         except Exception as e:
-            print(f"保存设置失败: {e}")
+            print(f"[错误] 保存设置失败: {e}")
     
     def ensure_sounds_folder(self):
         """确保sounds文件夹存在，并随机选择铃声"""
@@ -1370,14 +1533,21 @@ class TimerWindow(QMainWindow):
         return sound_files
             
     def play_sound(self, sound_file):
-        """播放铃声"""
+        """播放铃声（停止旧音效后播放新音效）"""
         try:
+            # 停止当前播放的音效
+            if self.media_player.state() == QMediaPlayer.PlayingState:
+                self.media_player.stop()
+            
             if os.path.exists(sound_file):
                 url = QUrl.fromLocalFile(sound_file)
                 content = QMediaContent(url)
                 self.media_player.setMedia(content)
                 self.media_player.setVolume(80)  # 设置音量为80%
                 self.media_player.play()
+            else:
+                print(f"音效文件不存在: {sound_file}")
+                QApplication.beep()
         except Exception as e:
             print(f"播放声音失败: {e}")
             QApplication.beep()
@@ -1461,14 +1631,7 @@ class TimerWindow(QMainWindow):
         mode_key = self.settings.get('timer_mode_key')
         if not mode_key:
             # 兜底：从旧文本推断
-            text = self.settings.get('timer_mode', '')
-            tl = text.lower() if isinstance(text, str) else ''
-            if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
-                mode_key = 'countup'
-            elif ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
-                mode_key = 'clock'
-            else:
-                mode_key = 'countdown'
+            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
             self.settings['timer_mode_key'] = mode_key
         print(f"[DEBUG] apply_settings: mode_key={mode_key}")
         if mode_key == 'countdown':
@@ -1486,6 +1649,9 @@ class TimerWindow(QMainWindow):
         self.time_label.adjustSize()
         self.resize(self.time_label.size())
         self.center_on_screen()
+        
+        # 更新托盘图标
+        self.update_tray_icon()
         
     def hex_to_rgb(self, hex_color):
         """将十六进制颜色转换为RGB"""
@@ -1543,7 +1709,7 @@ class TimerWindow(QMainWindow):
         
         for name, h, m, s in presets:
             action = QAction(name, self)
-            action.triggered.connect(lambda checked, hours=h, mins=m, secs=s: 
+            action.triggered.connect(lambda _, hours=h, mins=m, secs=s: 
                                     self.quick_countdown(hours, mins, secs))
             preset_menu.addAction(action)
             
@@ -1582,7 +1748,7 @@ class TimerWindow(QMainWindow):
         """初始化定时器"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_time)
-        self.timer.start(1000)  # 每秒更新一次
+        self.timer.start(TimerConstants.TIMER_UPDATE_INTERVAL)  # 每秒更新一次
         
         # 闪烁定时器
         self.flash_timer = QTimer()
@@ -1637,14 +1803,7 @@ class TimerWindow(QMainWindow):
         # 使用 language-independent 模式键
         mode_key = self.settings.get('timer_mode_key')
         if not mode_key:
-            text = self.settings.get('timer_mode', '')
-            tl = text.lower() if isinstance(text, str) else ''
-            if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
-                mode_key = 'countup'
-            elif ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
-                mode_key = 'clock'
-            else:
-                mode_key = 'countdown'
+            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
             self.settings['timer_mode_key'] = mode_key
         
         # 时钟模式
@@ -1671,8 +1830,9 @@ class TimerWindow(QMainWindow):
                     time_part = current_time.toString("hh:mm:ss") if self.settings.get("clock_show_seconds", True) else current_time.toString("hh:mm")
                     if self.settings.get("clock_show_am_pm", True):
                         ampm_style = self.settings.get("clock_am_pm_style", "zh")
-                        ap = current_time.toString("AP")
-                        is_pm = (ap.upper().endswith('P'))
+                        # 使用 hour() 判断，更可靠
+                        hour = current_time.time().hour()
+                        is_pm = hour >= 12
                         indicator = ('PM' if is_pm else 'AM') if ampm_style == 'en' else ('下午' if is_pm else '上午')
                         pos = self.settings.get("clock_am_pm_position", "before")
                         time_with_indicator = f"{indicator} {time_part}" if pos == 'before' else f"{time_part} {indicator}"
@@ -1696,8 +1856,9 @@ class TimerWindow(QMainWindow):
                     # 是否显示 AM/PM 指示
                     if self.settings.get("clock_show_am_pm", True):
                         ampm_style = self.settings.get("clock_am_pm_style", "zh")
-                        ap = current_time.toString("AP")
-                        is_pm = (ap.upper().endswith('P'))
+                        # 使用 hour() 判断，更可靠
+                        hour = current_time.time().hour()
+                        is_pm = hour >= 12
                         indicator = ('PM' if is_pm else 'AM') if ampm_style == 'en' else ('下午' if is_pm else '上午')
                         pos = self.settings.get("clock_am_pm_position", "before")
                         time_str = f"{indicator} {base}" if pos == 'before' else f"{base} {indicator}"
@@ -1725,9 +1886,12 @@ class TimerWindow(QMainWindow):
             time_str = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
             self.time_label.setText(time_str)
         
-        # 调整窗口大小以适应文本
-        self.time_label.adjustSize()
-        self.resize(self.time_label.size())
+        # 只在文本内容改变时才调整窗口大小
+        current_text = self.time_label.text()
+        if current_text != self.last_displayed_text:
+            self.last_displayed_text = current_text
+            self.time_label.adjustSize()
+            self.resize(self.time_label.size())
         
     def on_countdown_finished(self):
         """倒计时结束处理"""
@@ -1761,7 +1925,7 @@ class TimerWindow(QMainWindow):
             # 开始闪烁
             self.is_flashing = True
             self.flash_count = 0
-            self.flash_timer.start(500)
+            self.flash_timer.start(TimerConstants.FLASH_INTERVAL)
         
         # 弹窗提示
         if self.settings.get("enable_popup", True):
@@ -1785,7 +1949,7 @@ class TimerWindow(QMainWindow):
                 self.tr('countdown_finished'),
                 self.tr('countdown_finished_msg'),
                 QSystemTrayIcon.Information,
-                3000
+                TimerConstants.NOTIFICATION_DURATION_SHORT * 1000
             )
             
             # 确保窗口可见
@@ -1798,7 +1962,7 @@ class TimerWindow(QMainWindow):
                 toaster.show_toast(
                     "DesktopTimer",  # 通知标题
                     self.tr('countdown_finished') + "\n" + self.tr('countdown_finished_msg'),
-                    duration=5,
+                    duration=TimerConstants.NOTIFICATION_DURATION_LONG,
                     threaded=True
                 )
             except Exception as e:
@@ -1828,11 +1992,12 @@ class TimerWindow(QMainWindow):
                         padding: 20px 40px;
                     }}
                 """)
-            # 停止闪烁（只闪3次）
+            # 停止闪烁(只闪3次)
             self.flash_count += 1
-            if self.flash_count >= 6:  # 3次闪烁 = 6次状态切换
+            if self.flash_count >= TimerConstants.FLASH_COUNT_MAX:  # 3次闪烁 = 6次状态切换
                 self.is_flashing = False
                 self.flash_count = 0
+                self.update_tray_icon()  # 闪烁结束后更新托盘图标
         else:
             self.flash_timer.stop()
             self.apply_settings()
@@ -1846,7 +2011,7 @@ class TimerWindow(QMainWindow):
                 self.tr('app_name'),
                 self.tr('timer_continued'),
                 QSystemTrayIcon.Information,
-                1000
+                TimerConstants.TRAY_MESSAGE_DURATION
             )
         else:
             self.pause_action.setText(self.tr('continue'))
@@ -1854,7 +2019,7 @@ class TimerWindow(QMainWindow):
                 self.tr('app_name'),
                 self.tr('timer_paused'),
                 QSystemTrayIcon.Information,
-                1000
+                TimerConstants.TRAY_MESSAGE_DURATION
             )
         
         try:
@@ -1866,14 +2031,7 @@ class TimerWindow(QMainWindow):
         """重置计时：倒计时回到初始设置，正计时归零"""
         mode_key = self.settings.get('timer_mode_key')
         if not mode_key:
-            text = self.settings.get('timer_mode', '')
-            tl = text.lower() if isinstance(text, str) else ''
-            if ('count up' in tl) or ('正计时' in text) or (self.tr('count_up_mode') in text):
-                mode_key = 'countup'
-            elif ('clock' in tl) or ('时钟' in text) or (self.tr('clock_mode') in text):
-                mode_key = 'clock'
-            else:
-                mode_key = 'countdown'
+            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
             self.settings['timer_mode_key'] = mode_key
         if mode_key == 'countdown':
             hours = self.settings.get("countdown_hours", 0)
@@ -1888,7 +2046,7 @@ class TimerWindow(QMainWindow):
             self.tr('app_name'),
             self.tr('timer_reset'),
             QSystemTrayIcon.Information,
-            1000
+            TimerConstants.TRAY_MESSAGE_DURATION
         )
         
         try:
@@ -1951,7 +2109,7 @@ class TimerWindow(QMainWindow):
                     toaster.show_toast(
                         "DesktopTimer",
                         self.tr('window_locked'),
-                        duration=3,
+                        duration=TimerConstants.NOTIFICATION_DURATION_SHORT,
                         threaded=True
                     )
                 except Exception as e:
@@ -1966,7 +2124,7 @@ class TimerWindow(QMainWindow):
                     toaster.show_toast(
                         "DesktopTimer",
                         self.tr('window_unlocked'),
-                        duration=3,
+                        duration=TimerConstants.NOTIFICATION_DURATION_SHORT,
                         threaded=True
                     )
                 except Exception as e:
@@ -1984,9 +2142,33 @@ class TimerWindow(QMainWindow):
         self.create_tray_menu()
             
     def quit_app(self):
-        """退出应用"""
-        self.tray_icon.hide()
-        QApplication.quit()
+        """退出应用 - 清理所有资源"""
+        try:
+            # 停止所有定时器
+            if hasattr(self, 'timer') and self.timer:
+                self.timer.stop()
+                self.timer.deleteLater()
+            
+            if hasattr(self, 'flash_timer') and self.flash_timer:
+                self.flash_timer.stop()
+                self.flash_timer.deleteLater()
+            
+            # 停止并清理媒体播放器
+            if hasattr(self, 'media_player') and self.media_player:
+                if self.media_player.state() == QMediaPlayer.PlayingState:
+                    self.media_player.stop()
+                self.media_player.deleteLater()
+            
+            # 保存设置（立即保存，不延迟）
+            self.save_settings(immediate=True)
+            
+            # 隐藏托盘图标
+            if hasattr(self, 'tray_icon') and self.tray_icon:
+                self.tray_icon.hide()
+        except Exception as e:
+            print(f"[错误] 清理资源失败: {e}")
+        finally:
+            QApplication.quit()
         
     def mousePressEvent(self, event):
         """鼠标按下事件 - 用于拖动窗口"""
@@ -2037,7 +2219,7 @@ class TimerWindow(QMainWindow):
             if h == -1:
                 action.triggered.connect(self.switch_to_count_up)
             else:
-                action.triggered.connect(lambda checked, hours=h, mins=m, secs=s: 
+                action.triggered.connect(lambda _, hours=h, mins=m, secs=s: 
                                         self.quick_countdown(hours, mins, secs))
             preset_menu.addAction(action)
             
@@ -2086,7 +2268,7 @@ class TimerWindow(QMainWindow):
             self.tr('app_name'),
             self.tr('minimized_to_tray'),
             QSystemTrayIcon.Information,
-            1000
+            TimerConstants.TRAY_MESSAGE_DURATION
         )
         
     def update_tray_icon(self):
@@ -2113,17 +2295,9 @@ class TimerWindow(QMainWindow):
             print(f"更新托盘图标失败: {e}")
 
     def showEvent(self, event):
-        """首次显示时启动托盘图标刷新定时器"""
+        """窗口显示时更新托盘图标"""
         super().showEvent(event)
-        if not hasattr(self, '_icon_updater_started') or not self._icon_updater_started:
-            self._icon_updater_started = True
-            try:
-                self.icon_update_timer = QTimer(self)
-                self.icon_update_timer.timeout.connect(self.update_tray_icon)
-                self.icon_update_timer.start(1000)  # 每秒更新一次
-                self.update_tray_icon()
-            except Exception as e:
-                print(f"启动托盘图标刷新失败: {e}")
+        self.update_tray_icon()
 
 
 def main():
