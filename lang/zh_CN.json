@@ -110,8 +110,7 @@
     "am_pm_style_en": "AM/PM",
     "am_pm_style_zh": "上午/下午",
     "shortcut_lock": "锁定/解锁",
-    "shortcut_edit_hint": "提示：点击后按下组合键（如 Ctrl+Space）。"
-    ,
+    "shortcut_edit_hint": "提示：点击后按下组合键（如 Ctrl+Space）。",
     "startup_mode_behavior": "启动模式",
     "startup_mode_restore_last": "恢复上次模式",
     "startup_mode_fixed": "固定为指定模式",
@@ -125,5 +124,8 @@
     "about_license": "许可证",
     "about_license_value": "MIT 许可证",
     "about_description": "DesktopTimer 是一个简洁的桌面计时器，提供正计时、倒计时和时钟模式，并支持丰富的个性化设置。",
-    "about_thanks": "感谢使用 DesktopTimer！"
+    "about_thanks": "感谢使用 DesktopTimer！",
+    "enter_fullscreen": "进入全屏",
+    "exit_fullscreen": "退出全屏",
+    "shortcut_fullscreen": "切换全屏"
 }

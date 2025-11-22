@@ -57,6 +57,7 @@ DEFAULT_SHORTCUTS = {
     'show_hide': 'Ctrl+H',
     'open_settings': 'Ctrl+,',
     'lock_unlock': 'Ctrl+L',
+    'toggle_fullscreen': 'F11',
 }
 
 APP_VERSION = "1.0.2"
@@ -449,29 +450,25 @@ class SettingsDialog(QDialog):
         style_layout.addLayout(radius_layout)
         
         # 窗口大小调整
-        size_layout = QHBoxLayout()
+        # 窗口大小设置 - 使用滑块控制字体大小
+        size_layout = QVBoxLayout()
+        size_label_row = QHBoxLayout()
         size_label = QLabel(self.tr('window_size') + ':')
-        self.size_combo = QComboBox()
-        self.size_combo.addItems([
-            self.tr('size_small'),    # 小
-            self.tr('size_medium'),   # 中
-            self.tr('size_large'),    # 大
-            self.tr('size_extra_large') # 超大
-        ])
-        # 根据当前字体大小设置默认选项
-        current_size = self.parent_window.settings.get("font_size", 72)
-        if current_size <= 60:
-            self.size_combo.setCurrentIndex(0)  # 小
-        elif current_size <= 80:
-            self.size_combo.setCurrentIndex(1)  # 中
-        elif current_size <= 100:
-            self.size_combo.setCurrentIndex(2)  # 大
-        else:
-            self.size_combo.setCurrentIndex(3)  # 超大
-            
-        size_layout.addWidget(size_label)
-        size_layout.addWidget(self.size_combo)
-        size_layout.addStretch()
+        size_label_row.addWidget(size_label)
+        size_label_row.addStretch()
+        size_layout.addLayout(size_label_row)
+
+        slider_row = QHBoxLayout()
+        self.size_slider = QSlider(Qt.Horizontal)
+        self.size_slider.setRange(48, 220)
+        self.size_slider.setSingleStep(2)
+        current_size = self.parent_window.settings.get("font_size", 96)
+        self.size_slider.setValue(current_size)
+        self.size_value_label = QLabel(f"{current_size}px")
+        self.size_slider.valueChanged.connect(lambda v: self.size_value_label.setText(f"{v}px"))
+        slider_row.addWidget(self.size_slider, 1)
+        slider_row.addWidget(self.size_value_label)
+        size_layout.addLayout(slider_row)
         style_layout.addLayout(size_layout)
         
         style_group.setLayout(style_layout)
@@ -858,6 +855,7 @@ class SettingsDialog(QDialog):
             (self.tr('shortcut_hide') or '显示/隐藏', 'show_hide'),
             (self.tr('shortcut_settings') or '打开设置', 'open_settings'),
             (getattr(self, 'tr', lambda k: None)('shortcut_lock') or '锁定/解锁', 'lock_unlock'),
+            ((self.tr('shortcut_fullscreen') if 'shortcut_fullscreen' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else ('\u5168\u5c4f' if self.tr('quit') == '\u9000\u51fa' else 'Toggle Fullscreen')), 'toggle_fullscreen'),
         ]
 
         self.shortcut_edits = {}
@@ -1079,6 +1077,7 @@ class SettingsDialog(QDialog):
                     'show_hide': self.tr('shortcut_hide'),
                     'open_settings': self.tr('shortcut_settings'),
                     'lock_unlock': self.tr('shortcut_lock'),
+                    'toggle_fullscreen': self.tr('shortcut_fullscreen') if 'shortcut_fullscreen' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else 'Full Screen',
                 }
                 conflicts.append((name_map.get(name, name), 
                                 name_map.get(used_keys[seq], used_keys[seq]), 
@@ -1132,16 +1131,8 @@ class SettingsDialog(QDialog):
             shortcuts_saved[skey] = seq if seq else DEFAULT_SHORTCUTS.get(skey, '')
         self.parent_window.settings['shortcuts'] = shortcuts_saved
         
-        # 应用窗口大小设置
-        size_text = self.size_combo.currentText()
-        if self.tr('size_small') in size_text or '小' in size_text:
-            self.parent_window.settings["font_size"] = 60
-        elif self.tr('size_medium') in size_text or '中' in size_text:
-            self.parent_window.settings["font_size"] = 72
-        elif self.tr('size_large') in size_text or '大' in size_text:
-            self.parent_window.settings["font_size"] = 96
-        elif self.tr('size_extra_large') in size_text or '超大' in size_text:
-            self.parent_window.settings["font_size"] = 120
+        # 应用窗口大小设置（滑块控制字体大小）
+        self.parent_window.settings["font_size"] = self.size_slider.value()
         
         self.parent_window.apply_settings()
         # 让主窗口根据新快捷键重载绑定
@@ -1189,6 +1180,9 @@ class TimerWindow(QMainWindow):
         self.is_running = self.settings.get("auto_start_timer", False)
         self.is_flashing = False
         self.is_locked = False  # 窗口锁定状态
+        self.is_fullscreen = False  # ȫ��״̬
+        self._stored_geometry = None
+        self._stored_window_flags = None
         self.last_displayed_text = ""  # 缓存上一次显示的文本，用于优化窗口大小调整
         self.media_player = QMediaPlayer()
         
@@ -1561,6 +1555,7 @@ class TimerWindow(QMainWindow):
             Qt.FramelessWindowHint |    # 无边框
             Qt.Tool                      # 工具窗口
         )
+        self._stored_window_flags = self.windowFlags()
         self.setAttribute(Qt.WA_TranslucentBackground)  # 透明背景
         
         # 创建时间显示标签
@@ -1595,7 +1590,7 @@ class TimerWindow(QMainWindow):
         # 移动窗口到居中位置
         self.move(max(0, x), max(0, y))
         
-    def apply_settings(self):
+    def apply_settings(self, preserve_elapsed=False):
         """应用设置"""
         # 应用字体
         font = QFont(self.settings.get("font_family", "Consolas"), self.settings.get("font_size", 96), QFont.Bold)
@@ -1612,18 +1607,22 @@ class TimerWindow(QMainWindow):
             text_color = self.adjust_brightness(text_color, 0.6)
             bg_opacity = min(bg_opacity, 150)
         
+        if self.is_fullscreen:
+            bg_opacity = 255
+        
         # 转换RGB
         bg_rgb = self.hex_to_rgb(bg_color)
         
         # 圆角半径
-        corner_radius = self.settings.get("corner_radius", 15) if self.settings.get("rounded_corners", True) else 0
+        corner_radius = self.settings.get("corner_radius", 15) if (self.settings.get("rounded_corners", True) and not self.is_fullscreen) else 0
+        padding = "0px" if self.is_fullscreen else "30px 60px"
         
         self.time_label.setStyleSheet(f"""
             QLabel {{
                 color: {text_color};
                 background-color: rgba({bg_rgb[0]}, {bg_rgb[1]}, {bg_rgb[2]}, {bg_opacity});
                 border-radius: {corner_radius}px;
-                padding: 30px 60px;  /* 增加内边距，让窗口更宽敞 */
+                padding: {padding};  /* �����ڱ߾࣬�ô��ڸ����� */
             }}
         """)
         
@@ -1634,21 +1633,23 @@ class TimerWindow(QMainWindow):
             mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
             self.settings['timer_mode_key'] = mode_key
         print(f"[DEBUG] apply_settings: mode_key={mode_key}")
-        if mode_key == 'countdown':
-            total_seconds = (self.settings.get("countdown_hours", 0) * 3600 + 
-                           self.settings.get("countdown_minutes", 25) * 60 + 
-                           self.settings.get("countdown_seconds", 0))
-            self.elapsed_seconds = total_seconds
-        else:
-            # countup 或 clock 都从 0 开始显示（clock 模式不使用 elapsed_seconds）
-            self.elapsed_seconds = 0
+        if not preserve_elapsed:
+            if mode_key == 'countdown':
+                total_seconds = (self.settings.get("countdown_hours", 0) * 3600 + 
+                                   self.settings.get("countdown_minutes", 25) * 60 + 
+                                   self.settings.get("countdown_seconds", 0))
+                self.elapsed_seconds = total_seconds
+            else:
+                # countup �� clock ���� 0 ��ʼ��ʾ��clock ģʽ��ʹ�� elapsed_seconds��
+                self.elapsed_seconds = 0
             
         self.update_time()
         
         # 重新计算窗口大小并居中
-        self.time_label.adjustSize()
-        self.resize(self.time_label.size())
-        self.center_on_screen()
+        if not self.is_fullscreen:
+            self.time_label.adjustSize()
+            self.resize(self.time_label.size())
+            self.center_on_screen()
         
         # 更新托盘图标
         self.update_tray_icon()
@@ -1680,6 +1681,39 @@ class TimerWindow(QMainWindow):
         # 双击托盘图标显示/隐藏窗口
         self.tray_icon.activated.connect(self.tray_icon_activated)
         
+    def build_quick_presets_menu(self):
+        """������ͼ��/�Ҽ��˵��еĿ��ٹ���˵�"""
+        preset_menu = QMenu(self.tr('quick_presets'), self)
+
+        countup_action = QAction(self.tr('count_up_mode'), self)
+        countup_action.triggered.connect(self.switch_to_count_up)
+        preset_menu.addAction(countup_action)
+
+        preset_menu.addSeparator()
+
+        countdown_menu = QMenu(self.tr('countdown_mode'), self)
+        countdown_presets = [
+            (self.tr('pomodoro'), 0, 25, 0),
+            (self.tr('short_break'), 0, 5, 0),
+            (self.tr('long_break'), 0, 15, 0),
+            ('30 ' + self.tr('minutes'), 0, 30, 0),
+            ('1 ' + self.tr('hours'), 1, 0, 0),
+        ]
+        for name, h, m, s in countdown_presets:
+            action = QAction(name, self)
+            action.triggered.connect(lambda _, hours=h, mins=m, secs=s:
+                                     self.quick_countdown(hours, mins, secs))
+            countdown_menu.addAction(action)
+        preset_menu.addMenu(countdown_menu)
+
+        preset_menu.addSeparator()
+
+        clock_action = QAction(self.tr('clock_mode'), self)
+        clock_action.triggered.connect(self.switch_to_clock_mode)
+        preset_menu.addAction(clock_action)
+
+        return preset_menu
+        
     def create_tray_menu(self):
         """创建托盘菜单"""
         tray_menu = QMenu()
@@ -1695,25 +1729,7 @@ class TimerWindow(QMainWindow):
         tray_menu.addAction(reset_action)
         
         tray_menu.addSeparator()
-        
-        # 快捷预设菜单
-        preset_menu = QMenu(self.tr('quick_presets'), self)
-        
-        presets = [
-            (self.tr('pomodoro'), 0, 25, 0),
-            (self.tr('short_break'), 0, 5, 0),
-            (self.tr('long_break'), 0, 15, 0),
-            ('30 ' + self.tr('minutes'), 0, 30, 0),
-            ('1 ' + self.tr('hours'), 1, 0, 0),
-        ]
-        
-        for name, h, m, s in presets:
-            action = QAction(name, self)
-            action.triggered.connect(lambda _, hours=h, mins=m, secs=s: 
-                                    self.quick_countdown(hours, mins, secs))
-            preset_menu.addAction(action)
-            
-        tray_menu.addMenu(preset_menu)
+        tray_menu.addMenu(self.build_quick_presets_menu())
         
         tray_menu.addSeparator()
         
@@ -1726,6 +1742,11 @@ class TimerWindow(QMainWindow):
         toggle_action = QAction(self.tr('show_hide'), self)
         toggle_action.triggered.connect(self.toggle_visibility)
         tray_menu.addAction(toggle_action)
+
+        fullscreen_text = self.tr('exit_fullscreen') if self.is_fullscreen else self.tr('enter_fullscreen')
+        fullscreen_action = QAction(fullscreen_text, self)
+        fullscreen_action.triggered.connect(self.toggle_fullscreen)
+        tray_menu.addAction(fullscreen_action)
         
         tray_menu.addSeparator()
         
@@ -1777,6 +1798,7 @@ class TimerWindow(QMainWindow):
             (sc.get('show_hide', DEFAULT_SHORTCUTS['show_hide']), self.toggle_visibility),
             (sc.get('open_settings', DEFAULT_SHORTCUTS['open_settings']), self.show_settings),
             (sc.get('lock_unlock', DEFAULT_SHORTCUTS['lock_unlock']), self.toggle_lock),
+            (sc.get('toggle_fullscreen', DEFAULT_SHORTCUTS['toggle_fullscreen']), self.toggle_fullscreen),
         ]
         for seq_str, handler in mapping:
             try:
@@ -1888,7 +1910,7 @@ class TimerWindow(QMainWindow):
         
         # 只在文本内容改变时才调整窗口大小
         current_text = self.time_label.text()
-        if current_text != self.last_displayed_text:
+        if current_text != self.last_displayed_text and not self.is_fullscreen:
             self.last_displayed_text = current_text
             self.time_label.adjustSize()
             self.resize(self.time_label.size())
@@ -2082,8 +2104,56 @@ class TimerWindow(QMainWindow):
         if self.isVisible():
             self.hide()
         else:
-            self.show()
+            if self.is_fullscreen:
+                self.showFullScreen()
+            else:
+                self.show()
             self.activateWindow()
+
+    def toggle_fullscreen(self):
+        """�л�ȫ��/�˳�ȫ��"""
+        if self.is_fullscreen:
+            self.exit_fullscreen()
+        else:
+            self.enter_fullscreen()
+
+    def enter_fullscreen(self):
+        """����ȫ��ģʽ"""
+        if self.is_fullscreen:
+            return
+        self.is_fullscreen = True
+        try:
+            self._stored_geometry = self.geometry()
+        except Exception:
+            self._stored_geometry = None
+        self._stored_window_flags = self.windowFlags()
+        self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.showFullScreen()
+        self.apply_settings(preserve_elapsed=True)
+        self.create_tray_menu()
+        try:
+            self.update_tray_icon()
+        except Exception:
+            pass
+
+    def exit_fullscreen(self):
+        """�˳�ȫ��ģʽ"""
+        if not self.is_fullscreen:
+            return
+        self.is_fullscreen = False
+        restore_flags = self._stored_window_flags or (Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
+        self.setWindowFlags(restore_flags)
+        self.showNormal()
+        if self._stored_geometry:
+            self.setGeometry(self._stored_geometry)
+        else:
+            self.center_on_screen()
+        self.apply_settings(preserve_elapsed=True)
+        self.create_tray_menu()
+        try:
+            self.update_tray_icon()
+        except Exception:
+            pass
             
     def tray_icon_activated(self, reason):
         """托盘图标激活事件"""
@@ -2172,13 +2242,13 @@ class TimerWindow(QMainWindow):
         
     def mousePressEvent(self, event):
         """鼠标按下事件 - 用于拖动窗口"""
-        if event.button() == Qt.LeftButton and not self.is_locked:
+        if event.button() == Qt.LeftButton and not self.is_locked and not self.is_fullscreen:
             self.dragging = True
             self.offset = event.globalPos() - self.pos()
             
     def mouseMoveEvent(self, event):
         """鼠标移动事件 - 用于拖动窗口"""
-        if self.dragging and not self.is_locked:
+        if self.dragging and not self.is_locked and not self.is_fullscreen:
             self.move(event.globalPos() - self.offset)
             
     def mouseReleaseEvent(self, event):
@@ -2201,29 +2271,7 @@ class TimerWindow(QMainWindow):
         menu.addAction(reset_action)
         
         menu.addSeparator()
-        
-        # 快捷预设
-        preset_menu = QMenu(self.tr('quick_presets'), self)
-        
-        presets = [
-            (self.tr('pomodoro'), 0, 25, 0),
-            (self.tr('short_break'), 0, 5, 0),
-            (self.tr('long_break'), 0, 15, 0),
-            ('30 ' + self.tr('minutes'), 0, 30, 0),
-            ('1 ' + self.tr('hours'), 1, 0, 0),
-            (self.tr('switch_count_up'), -1, -1, -1),
-        ]
-        
-        for name, h, m, s in presets:
-            action = QAction(name, self)
-            if h == -1:
-                action.triggered.connect(self.switch_to_count_up)
-            else:
-                action.triggered.connect(lambda _, hours=h, mins=m, secs=s: 
-                                        self.quick_countdown(hours, mins, secs))
-            preset_menu.addAction(action)
-            
-        menu.addMenu(preset_menu)
+        menu.addMenu(self.build_quick_presets_menu())
         menu.addSeparator()
         
         # 锁定/解锁窗口
@@ -2243,6 +2291,11 @@ class TimerWindow(QMainWindow):
         hide_action = QAction(self.tr('show_hide'), self)
         hide_action.triggered.connect(self.hide)
         menu.addAction(hide_action)
+
+        fullscreen_text = self.tr('exit_fullscreen') if self.is_fullscreen else self.tr('enter_fullscreen')
+        fullscreen_action = QAction(fullscreen_text, self)
+        fullscreen_action.triggered.connect(self.toggle_fullscreen)
+        menu.addAction(fullscreen_action)
         
         menu.addSeparator()
         
@@ -2257,6 +2310,13 @@ class TimerWindow(QMainWindow):
         """切换到正计时"""
         self.settings["timer_mode"] = self.tr('count_up_mode')
         self.settings["timer_mode_key"] = 'countup'
+        self.save_settings()
+        self.reset_timer()
+
+    def switch_to_clock_mode(self):
+        """�л���ʱ��ģʽ"""
+        self.settings["timer_mode"] = self.tr('clock_mode')
+        self.settings["timer_mode_key"] = "clock"
         self.save_settings()
         self.reset_timer()
             

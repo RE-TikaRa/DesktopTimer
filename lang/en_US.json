@@ -89,7 +89,7 @@
     "no_sound_files_msg": "No audio files found in sounds folder\nPlease add .wav, .mp3 or .ogg audio files",
     "window_size": "Window Size",
     "size_small": "Small",
-    "size_medium": "Medium", 
+    "size_medium": "Medium",
     "size_large": "Large",
     "size_extra_large": "Extra Large",
     "lock_window": "Lock Window",
@@ -110,8 +110,7 @@
     "am_pm_style_en": "AM/PM",
     "am_pm_style_zh": "上午/下午",
     "shortcut_lock": "Lock/Unlock",
-    "shortcut_edit_hint": "Tip: Click and press the key combo (e.g., Ctrl+Space)."
-    ,
+    "shortcut_edit_hint": "Tip: Click and press the key combo (e.g., Ctrl+Space).",
     "startup_mode_behavior": "Startup Mode",
     "startup_mode_restore_last": "Restore last mode",
     "startup_mode_fixed": "Always use fixed mode",
@@ -125,5 +124,8 @@
     "about_license": "License",
     "about_license_value": "MIT License",
     "about_description": "DesktopTimer is a lightweight desktop timer that offers count up, countdown, and clock modes with rich customization options.",
-    "about_thanks": "Thanks for using DesktopTimer!"
+    "about_thanks": "Thanks for using DesktopTimer!",
+    "enter_fullscreen": "Enter Fullscreen",
+    "exit_fullscreen": "Exit Fullscreen",
+    "shortcut_fullscreen": "Toggle Fullscreen"
 }
