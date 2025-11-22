@@ -60,7 +60,7 @@ DEFAULT_SHORTCUTS = {
     'toggle_fullscreen': 'F11',
 }
 
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 PROJECT_URL = "https://github.com/RE-TikaRa/DesktopTimer"
 
 

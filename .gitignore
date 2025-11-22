@@ -30,3 +30,9 @@ settings/timer_settings.json
 # Do not commit the README template
 README-object.md
 .codemap
+
+# 忽略根目录下的所有 .bat 文件
+/*.bat
+
+# 但不要忽略 tools 文件夹下的 .bat 文件
+!tools/*.bat
