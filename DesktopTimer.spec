@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['desktop_timer.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[],  # 不打包任何数据文件到 exe 内部

@@ -16,7 +16,7 @@
    <a href="https://github.com/RE-TikaRa/DesktopTimer/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/RE-TikaRa/DesktopTimer.svg?style=flat-square" alt="License" />
    </a>
-  
+
 </p>
 
 <p align="center">
@@ -53,7 +53,7 @@
 - 下载 DesktopTimer.zip → 解压 → 直接运行 DesktopTimer.exe
 
 3) 从源码运行（开发者）
-- 克隆仓库并安装依赖后运行 `desktop_timer.py`（见下文“开发者指南”）
+- 克隆仓库并安装依赖后运行 `main.py`（见下文“开发者指南”）
 
 ---
 
@@ -61,9 +61,10 @@
 
 - ⏰ 三种计时：正计时、倒计时、时钟（12/24 小时制、可选“秒/日期”）
 - 🔔 提醒方式：自定义音效、系统 Beep、窗口闪烁、托盘气泡、Windows 通知
-- 🌐 多语言：中文 / English 一键切换
+- 🌐 双语言：中文 / English 一键切换
+- 🎯 预设管理：设置页支持自定义/排序倒计时预设，可为中/英文界面分别命名并同步托盘快捷菜单
 - 🎨 外观：字体/字号、颜色、圆角、透明度、夜读模式、窗口尺寸
-- 🧰 系统托盘：暂停/继续、重置、快捷预设、显示/隐藏、锁定/解锁、打开设置、退出
+- 🧰 系统托盘：暂停/继续、重置、模式切换、倒计时预设（含自定义单次输入）、显示/隐藏、锁定/解锁、打开设置、退出
 - 🔒 窗口锁定：固定位置并可启用“点击穿透”
 - ⌨️ 快捷键：常用操作一键直达
 - 🖥️ 全屏模式：F11 一键切换，简拍/展示更方便
@@ -110,7 +111,13 @@ cd DesktopTimer
 pip install -r requirements.txt
 
 # 运行
-python desktop_timer.py
+python main.py
+
+# 如需调试日志，可在运行前设置环境变量
+# PowerShell
+$env:DESKTOPTIMER_DEBUG=1
+# CMD
+set DESKTOPTIMER_DEBUG=1
 ```
 
 ### 打包为可执行文件
@@ -122,27 +129,35 @@ python -m PyInstaller DesktopTimer.spec --noconfirm
 ### 文件结构
 ```
 DesktopTimer/
-├── desktop_timer.py           # 主程序（UI/托盘/计时/提醒/设置）
-├── DesktopTimer.spec          # PyInstaller 打包配置
+├── main.py           # 程序入口
+├── /module/          # 拆分逻辑（app/窗口/配置等）
+│   ├── __init__.py
+│   ├── app.py
+│   ├── constants.py
+│   ├── localization.py
+│   ├── paths.py
+│   ├── settings_dialog.py
+│   └── timer_window.py
+├── DesktopTimer.spec          # PyInstaller 配置
 ├── requirements.txt           # Python 依赖
-├── README.md                  # 项目说明（本文件）
+├── README.md                  # 项目说明
 ├── /img/                      # 图标资源
-│   ├── timer_icon.ico         # 应用图标
+│   ├── timer_icon.ico
 │   └── ALP_STUDIO-logo-full.svg
-├── /lang/                     # 多语言文件
+├── /lang/                     # 语言包
 │   ├── zh_CN.json
 │   └── en_US.json
-├── /sounds/                   # 提醒音效（10 个）
-├── /settings/                 # 运行时生成的用户设置
+├── /sounds/                   # 提醒音
+├── /settings/                 # 用户运行时配置
 │   └── timer_settings.json
-├── /build/                    # 构建临时文件
-└── /dist/                     # 编译输出（exe）
+├── /build/                    # 临时构建文件
+└── /dist/                     # 打包输出
 ```
 
 ### 架构与实现要点
 - i18n：多语言加载（lang/*.json）
 - SettingsDialog：设置对话框（外观/模式/预设/通用/关于）
-- TimerWindow：主窗口/计时/托盘/提醒/快捷键
+- TimerWindow：主窗口/计时/托盘/提醒/快捷键（含模式切换菜单、倒计时预设与自定义单次输入）
 - 路径管理：自动识别开发/打包环境，动态定位资源
 - 配置管理：JSON 持久化，包含版本兼容处理
 
@@ -175,6 +190,9 @@ DesktopTimer/
 5. 打包后资源路径异常？
    - 本项目已兼容 `sys.frozen` 场景；若自定义了运行目录，请保持资源与可执行文件同级。
 
+6. 切换语言后界面没变化？
+   - 语言下拉框一旦切换就会立即应用到主窗口与托盘；若仍看到旧语言，可确认设置文件是否可写或查看日志输出。
+
 ---
 
 ## 🧭 开发路线图
@@ -189,9 +207,10 @@ DesktopTimer/
 - 番茄钟快捷预设
 - 窗口锁定功能（位置固定 + 点击穿透）
 - 快捷键自定义
+- 托盘模式切换与即席自定义倒计时
+- 预设支持中英文双描述，可在创建时同步填写
 
 ### 📌 计划中的功能
-- 托盘与右键菜单中直接提供切换模式的方式
 - 结束提醒增强：音量、循环次数、渐入渐出；播放列表/多音频轮播
 - Windows 原生通知按钮（如“再来 5 分钟”“停止”）
 - 托盘与主题：暗/亮主题托盘图标，自定义图标包
@@ -203,6 +222,12 @@ DesktopTimer/
 - 全屏专用主题：进入全屏时可使用独立的背景/文字/透明度样式
 - 自定义快捷预设：允许用户在设置中增删 Pomodoro 预设并同步到托盘/右键菜单
 - 配置导入/导出：一键备份或应用 `settings/*.json`，方便在不同设备间迁移
+- 预设导入/导出能力（JSON 备份/恢复）
+- 预设列表排序、搜索或分组功能
+- 语言切换提示（关闭设置前提醒“需点击应用/确定”）
+- 设置中添加调试日志开关（无需依赖环境变量）
+- 更易用的预设多语言编辑视图（统一列表，可批量维护）
+- 替换 win10toast 或移除其中的 `pkg_resources` 依赖以适配未来环境
 
 ---
 
@@ -215,6 +240,12 @@ DesktopTimer/
 ---
 
 ## 🗓️ 版本更新日志
+
+### v1.0.4 (2025-11-28)
+- ⚙️ 预设编辑器支持多语言独立名称，可添加/移除任意语言描述，并给出显式提示避免误填
+- 🪵 日志体系切换至 `logging`，设置 `DESKTOPTIMER_DEBUG=1` 即可启用 DEBUG 日志
+- 🌐 设置页语言切换支持即时预览但不会自动保存，FAQ 中新增说明
+- 🔊 随机铃声、声音播放、托盘通知等异常统一纳入日志输出，取代零散的 `print`
 
 ### v1.0.3 (2025-11-23)
 - ⚡️ 窗口大小控件更加可视，滑块+“恢复默认”快速调整字号

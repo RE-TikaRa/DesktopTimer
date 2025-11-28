@@ -1,3 +1,3 @@
 @echo off
-python desktop_timer.py
+python main.py
 pause
