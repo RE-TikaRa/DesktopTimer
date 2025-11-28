@@ -19,6 +19,7 @@ ENV/
 build/
 dist/
 setup/
+*.zip
 
 # IDE
 .vscode/
