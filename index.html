@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desktop Timer - 简单高效的桌面计时器</title>
+    <link rel="icon" href="favicon.ico">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'text-shimmer': 'text-shimmer 2.5s ease-out infinite alternate',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        'text-shimmer': {
+                            '0%': { backgroundPosition: '0% 50%' },
+                            '100%': { backgroundPosition: '100% 50%' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Glassmorphism & Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass {
+            background: rgba(17, 24, 39, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Grid Background Pattern */
+        .bg-grid-slate-100 {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(241 245 249 / 0.6)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+        }
+        .dark .bg-grid-slate-900 {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(15 23 42 / 0.3)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #0d9488, #0f766e, #0d9488);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: text-shimmer 3s linear infinite;
+        }
+        .dark .text-gradient {
+            background: linear-gradient(to right, #2dd4bf, #14b8a6, #2dd4bf);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* 3D Transform for Hero Image */
+        .hero-perspective {
+            perspective: 1000px;
+        }
+        .hero-rotate {
+            transform: rotateX(2deg) rotateY(-2deg);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hero-rotate:hover {
+            transform: rotateX(0) rotateY(0) scale(1.02);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+    </style>
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-sans antialiased selection:bg-primary-200 dark:selection:bg-primary-900 relative">
+    <!-- Background Grid -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-900 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 glass transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <img src="logo.svg" alt="Logo" class="h-8 w-auto">
+                    <span class="font-bold text-xl tracking-tight">Desktop Timer</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#home" class="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">首页</a>
+                    <a href="#features" class="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">功能</a>
+                    <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">GitHub</a>
+                    
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none">
+                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    </button>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-theme-toggle" class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none">
+                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    </button>
+                    <button id="mobile-menu-btn" class="p-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden glass border-t border-gray-200 dark:border-gray-700 absolute w-full left-0 top-16">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <a href="#home" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onclick="document.getElementById('mobile-menu').classList.add('hidden')">首页</a>
+                <a href="#features" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onclick="document.getElementById('mobile-menu').classList.add('hidden')">功能</a>
+                <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <!-- Background Blobs -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-[-1] overflow-hidden pointer-events-none">
+            <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-300/20 rounded-full blur-[100px] animate-pulse"></div>
+            <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-300/20 rounded-full blur-[100px] animate-pulse" style="animation-delay: 1s;"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div data-aos="fade-up" data-aos-duration="1000">
+                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
+                    <span class="block text-gray-900 dark:text-white">Desktop Timer</span>
+                    <span class="block text-gradient mt-2">简单 · 高效 · 专注</span>
+                </h1>
+                <p class="mt-4 text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                    一款轻量级的桌面倒计时工具，助您更好地管理时间，提升工作与学习效率。
+                </p>
+                
+                <div class="mt-10 flex justify-center gap-4">
+                    <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="px-8 py-3 rounded-full bg-primary-600 hover:bg-primary-700 text-white font-semibold text-lg shadow-lg hover:shadow-primary-500/30 transition-all transform hover:-translate-y-1">
+                        <i class="fab fa-github mr-2"></i> 获取源码
+                    </a>
+                    <a href="#features" class="px-8 py-3 rounded-full glass-card text-gray-700 dark:text-gray-200 font-semibold text-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all transform hover:-translate-y-1">
+                        了解更多
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-20 hero-perspective" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000">
+                <div class="hero-rotate relative rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-900 flex items-center justify-center h-96">
+                    <!-- Placeholder for screenshot -->
+                    <div class="text-center p-10">
+                        <i class="fas fa-clock text-6xl text-primary-400 mb-4"></i>
+                        <p class="text-gray-400 text-lg">应用界面预览</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-32">
+            
+            <!-- Feature 1 -->
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="lg:w-1/2" data-aos="fade-right">
+                    <div class="relative rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-64 flex items-center justify-center">
+                         <i class="fas fa-language text-6xl text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="lg:w-1/2" data-aos="fade-left">
+                    <div class="flex items-center gap-4 mb-4">
+                        <span class="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                            <i class="fas fa-globe text-xl"></i>
+                        </span>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">多语言支持</h3>
+                    </div>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                        内置中文与英文语言包，根据您的系统环境或个人喜好自由切换，打破语言障碍。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="flex flex-col lg:flex-row-reverse items-center gap-16">
+                <div class="lg:w-1/2" data-aos="fade-left">
+                    <div class="relative rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-64 flex items-center justify-center">
+                        <i class="fas fa-music text-6xl text-purple-500"></i>
+                    </div>
+                </div>
+                <div class="lg:w-1/2" data-aos="fade-right">
+                    <div class="flex items-center gap-4 mb-4">
+                        <span class="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                            <i class="fas fa-volume-up text-xl"></i>
+                        </span>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">自定义提示音</h3>
+                    </div>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                        提供多种预设报警音效，支持自定义设置，让每一次计时结束都以您喜欢的方式提醒。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="lg:w-1/2" data-aos="fade-right">
+                    <div class="relative rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-64 flex items-center justify-center">
+                        <i class="fas fa-desktop text-6xl text-green-500"></i>
+                    </div>
+                </div>
+                <div class="lg:w-1/2" data-aos="fade-left">
+                    <div class="flex items-center gap-4 mb-4">
+                        <span class="p-3 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                            <i class="fas fa-check-circle text-xl"></i>
+                        </span>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">简单易用</h3>
+                    </div>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                        极简的用户界面设计，专注于计时功能本身，无多余干扰，让您快速上手，即刻专注。
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-3 mb-6">
+                        <img src="logo.svg" alt="Logo" class="h-8 w-auto">
+                        <span class="font-bold text-xl">Desktop Timer</span>
+                    </div>
+                    <p class="text-gray-500 dark:text-gray-400 max-w-md">
+                        Desktop Timer 是一个开源的桌面计时器项目，旨在提供简单、高效的时间管理体验。
+                    </p>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-6">链接</h4>
+                    <ul class="space-y-4">
+                        <li><a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">GitHub 仓库</a></li>
+                        <li><a href="https://github.com/RE-TikaRa/DesktopTimer/issues" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">问题反馈</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-200 dark:border-gray-800 pt-8 text-center">
+                <p class="text-gray-500 dark:text-gray-500 text-sm">
+                    &copy; 2024 Desktop Timer. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            once: true,
+            offset: 50,
+            duration: 800,
+        });
+
+        // Theme Toggle Logic
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const mobileThemeToggleBtn = document.getElementById('mobile-theme-toggle');
+        
+        if(themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+        if(mobileThemeToggleBtn) mobileThemeToggleBtn.addEventListener('click', toggleTheme);
+
+        // Mobile Menu Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                const icon = mobileMenuBtn.querySelector('i');
+                if (mobileMenu.classList.contains('hidden')) {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                } else {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

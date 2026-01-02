@@ -1,0 +1,114 @@
+{
+    "font_family": "Consolas",
+    "font_size": 96,
+    "text_color": "#E0E0E0",
+    "bg_color": "#1E1E1E",
+    "bg_opacity": 200,
+    "night_mode": false,
+    "timer_mode": "正计时",
+    "timer_mode_key": "countup",
+    "countdown_hours": 0,
+    "countdown_minutes": 25,
+    "countdown_seconds": 0,
+    "countdown_action": "beep",
+    "sound_file": "sounds/Alarm01.wav",
+    "language": "zh_CN",
+    "clock_format_24h": true,
+    "clock_show_seconds": true,
+    "clock_show_date": false,
+    "clock_show_am_pm": true,
+    "clock_am_pm_style": "zh",
+    "clock_am_pm_position": "before",
+    "startup_mode_behavior": "restore",
+    "startup_fixed_mode_key": "countdown",
+    "shortcuts": {
+        "pause_resume": "Ctrl+Space",
+        "reset": "Ctrl+R",
+        "show_hide": "Ctrl+H",
+        "open_settings": "Ctrl+,",
+        "lock_unlock": "Ctrl+L",
+        "toggle_fullscreen": "F11"
+    },
+    "countdown_presets": [
+        {
+            "id": "builtin_pomodoro",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 25,
+            "seconds": 0,
+            "name_key": "pomodoro"
+        },
+        {
+            "id": "builtin_short_break",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 5,
+            "seconds": 0,
+            "name_key": "short_break"
+        },
+        {
+            "id": "builtin_long_break",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 15,
+            "seconds": 0,
+            "name_key": "long_break"
+        },
+        {
+            "id": "builtin_10m",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 10,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_20m",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 20,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_30m",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 30,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_45m",
+            "mode": "countdown",
+            "hours": 0,
+            "minutes": 45,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_1h",
+            "mode": "countdown",
+            "hours": 1,
+            "minutes": 0,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_1h30",
+            "mode": "countdown",
+            "hours": 1,
+            "minutes": 30,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_2h",
+            "mode": "countdown",
+            "hours": 2,
+            "minutes": 0,
+            "seconds": 0
+        },
+        {
+            "id": "builtin_3h",
+            "mode": "countdown",
+            "hours": 3,
+            "minutes": 0,
+            "seconds": 0
+        }
+    ]
+}
