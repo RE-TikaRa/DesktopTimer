@@ -70,10 +70,180 @@ class SettingsDialog(QDialog):
         # 隐藏帮助按钮
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         
-        self.setMinimumSize(700, 800)  # 进一步增加尺寸确保内容显示完整
-        self.resize(700, 800)  # 设置初始大小
+        self.setMinimumSize(800, 600)  # 允许用户缩小窗口
+        self.resize(850, 800)  # 设置默认大小
+        self.apply_stylesheet()
         self.init_ui()
         
+    def apply_stylesheet(self):
+        """应用美化样式"""
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f5f5f7;
+                font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            }
+
+            QTabWidget::pane {
+                border: 1px solid #e0e0e0;
+                background: white;
+                border-radius: 8px;
+                margin-top: -1px;
+            }
+
+            QTabWidget::tab-bar {
+                left: 10px;
+            }
+
+            QTabBar::tab {
+                background: #e0e0e0;
+                color: #555;
+                padding: 8px 20px;
+                margin-right: 4px;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                border: 1px solid #ccc;
+                border-bottom: none;
+                min-width: 80px;
+            }
+
+            QTabBar::tab:selected {
+                background: white;
+                color: #333;
+                border-bottom: 1px solid white;
+                font-weight: bold;
+            }
+
+            QTabBar::tab:hover {
+                background: #eaeaea;
+            }
+
+            QGroupBox {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                margin-top: 1.2em;
+                padding-top: 15px;
+                font-weight: bold;
+                color: #333;
+            }
+
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                padding: 0 5px;
+                left: 10px;
+                color: #555;
+            }
+
+            QPushButton {
+                background-color: #007aff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: 500;
+                min-width: 80px;
+            }
+
+            QPushButton:hover {
+                background-color: #0062cc;
+            }
+
+            QPushButton:pressed {
+                background-color: #0051a8;
+            }
+            
+            /* 针对特定按钮的样式覆盖，如果需要的话，可以通过 objectName */
+
+            QLineEdit, QSpinBox, QComboBox, QKeySequenceEdit {
+                border: 1px solid #d1d1d6;
+                border-radius: 6px;
+                padding: 6px 8px;
+                background: white;
+                selection-background-color: #007aff;
+                min-height: 20px;
+            }
+
+            QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QKeySequenceEdit:focus {
+                border: 1px solid #007aff;
+            }
+
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 25px;
+                border-left-width: 0px;
+                border-top-right-radius: 6px;
+                border-bottom-right-radius: 6px;
+            }
+
+            QComboBox::down-arrow {
+                width: 0; 
+                height: 0; 
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid #666;
+                margin-right: 5px;
+            }
+
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+            
+            QScrollArea > QWidget > QWidget {
+                background: transparent;
+            }
+
+            QScrollBar:vertical {
+                border: none;
+                background: #f1f1f1;
+                width: 10px;
+                margin: 0px;
+                border-radius: 5px;
+            }
+
+            QScrollBar::handle:vertical {
+                background: #c1c1c1;
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            
+            QScrollBar::handle:vertical:hover {
+                background: #a8a8a8;
+            }
+
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            
+            QListWidget {
+                border: 1px solid #d1d1d6;
+                border-radius: 6px;
+                background: white;
+                outline: none;
+            }
+
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            QListWidget::item:selected {
+                background-color: #e3f2fd;
+                color: #333;
+                border-radius: 4px;
+            }
+
+            QListWidget::item:hover {
+                background-color: #f5f5f7;
+            }
+            
+            QLabel {
+                color: #333;
+            }
+        """)
+
     def tr(self, key):
         """翻译助手"""
         lang = self.parent_window.settings.get("language", "zh_CN")
@@ -144,6 +314,8 @@ class SettingsDialog(QDialog):
     def init_ui(self):
         """初始化设置界面"""
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         # 创建选项卡
         tabs = QTabWidget()
@@ -172,14 +344,31 @@ class SettingsDialog(QDialog):
         
         # 按钮区域
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
         
         apply_btn = QPushButton(self.tr('apply'))
+        apply_btn.setCursor(Qt.PointingHandCursor)
         apply_btn.clicked.connect(self.apply_settings)
         
         ok_btn = QPushButton(self.tr('ok'))
+        ok_btn.setCursor(Qt.PointingHandCursor)
         ok_btn.clicked.connect(self.accept_settings)
         
         cancel_btn = QPushButton(self.tr('cancel'))
+        cancel_btn.setCursor(Qt.PointingHandCursor)
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e5e5ea;
+                color: #333;
+                border: 1px solid #d1d1d6;
+            }
+            QPushButton:hover {
+                background-color: #d1d1d6;
+            }
+            QPushButton:pressed {
+                background-color: #c7c7cc;
+            }
+        """)
         cancel_btn.clicked.connect(self.reject)
         
         button_layout.addStretch()
@@ -939,6 +1128,10 @@ class SettingsDialog(QDialog):
         
     def create_general_tab(self):
         """创建通用设置选项卡"""
+        # 创建滚动区域
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        
         widget = QWidget()
         layout = QVBoxLayout()
         
@@ -1094,7 +1287,17 @@ class SettingsDialog(QDialog):
 
         layout.addStretch()
         widget.setLayout(layout)
-        return widget
+        
+        # 设置滚动区域
+        scroll.setWidget(widget)
+        
+        # 创建包装器小部件
+        wrapper = QWidget()
+        wrapper_layout = QVBoxLayout()
+        wrapper_layout.addWidget(scroll)
+        wrapper.setLayout(wrapper_layout)
+        
+        return wrapper
         
     def on_mode_changed(self, mode):
         """模式改变时的处理"""
