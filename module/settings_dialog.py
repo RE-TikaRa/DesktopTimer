@@ -65,8 +65,14 @@ class SettingsDialog(QDialog):
         self.parent_window = cast("TimerWindow", parent)
         self._current_lang_code = self.parent_window.settings.get("language", "zh_CN")
         self._initial_lang_code = self._current_lang_code
+        self._initial_theme_mode = self.parent_window.settings.get("theme_mode", "auto")
+        self._initial_theme_color = self.parent_window.settings.get("theme_color", "#0078D4")
+        raw_custom_colors = self.parent_window.settings.get("theme_custom_colors", [])
+        self._initial_theme_custom_colors = list(raw_custom_colors) if isinstance(raw_custom_colors, list) else []
         self._other_lang_code = self._find_other_language(self._current_lang_code)
         self._preset_data = self._load_preset_snapshot()
+        self._preset_filter_text = ""
+        self._preset_sort_mode = self.parent_window.settings.get("preset_sort_mode", "manual")
         self._applied_once = False
         self.setWindowTitle(self.tr('settings_title'))
         
@@ -561,6 +567,7 @@ class SettingsDialog(QDialog):
         )
         self.theme_mode_card.hBoxLayout.addSpacing(16)
         theme_group.addSettingCard(self.theme_mode_card)
+        self.theme_mode_combo.currentIndexChanged.connect(self._preview_theme_change)
 
         theme_color = self.parent_window.settings.get("theme_color", "#0078D4")
         self.theme_color_btn = QPushButton()
@@ -585,14 +592,27 @@ class SettingsDialog(QDialog):
             "#8E8CD8",
             "#2D7D9A",
         ]
+        self.theme_color_preset_buttons = []
         for color in preset_colors:
             btn = QPushButton()
             btn.setFixedSize(22, 22)
             btn.setStyleSheet(
-                f"background-color: {color}; border: 1px solid #666; border-radius: 4px;"
+                f"background-color: {color}; border: 2px solid #666; border-radius: 4px;"
             )
             btn.clicked.connect(lambda _, c=color: self._set_theme_color(c))
             preset_layout.addWidget(btn)
+            self.theme_color_preset_buttons.append((color, btn))
+        custom_colors = self._normalize_theme_custom_colors(
+            self.parent_window.settings.get("theme_custom_colors", [])
+        )
+        self.parent_window.settings["theme_custom_colors"] = custom_colors
+        self.theme_color_custom_buttons = []
+        for idx, color in enumerate(custom_colors):
+            btn = QPushButton()
+            btn.setFixedSize(22, 22)
+            btn.clicked.connect(lambda _, i=idx: self._choose_custom_theme_color(i))
+            preset_layout.addWidget(btn)
+            self.theme_color_custom_buttons.append((idx, btn))
         self.theme_color_card.hBoxLayout.addWidget(
             preset_container,
             0,
@@ -607,6 +627,8 @@ class SettingsDialog(QDialog):
         self.theme_color_card.hBoxLayout.addSpacing(16)
         theme_group.addSettingCard(self.theme_color_card)
         layout.addWidget(theme_group)
+        self._update_theme_color_presets(theme_color)
+        self._update_theme_color_custom_buttons(theme_color)
 
         night_group = SettingCardGroup(self.tr('night_mode'), widget)
         self.night_mode_card = SwitchSettingCard(
@@ -871,47 +893,168 @@ class SettingsDialog(QDialog):
         preset_label.setWordWrap(True)
         preset_layout.addWidget(preset_label)
 
+        self.preset_search_edit = QLineEdit()
+        self.preset_search_edit.setPlaceholderText(self.tr('preset_search_placeholder'))
+        self.preset_search_edit.setClearButtonEnabled(True)
+        self.preset_search_edit.textChanged.connect(self._on_preset_search_changed)
+        preset_layout.addWidget(self.preset_search_edit)
+
         self.preset_list = QListWidget()
-        self.preset_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.preset_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.preset_list.setMinimumHeight(260)
         self.preset_list.itemSelectionChanged.connect(self._update_preset_button_states)
         self.preset_list.itemDoubleClicked.connect(lambda _: self.edit_selected_preset())
         preset_layout.addWidget(self.preset_list)
 
-        action_row = QHBoxLayout()
-        self.preset_add_btn = QPushButton(self.tr('preset_add'))
+        layout.addWidget(preset_group)
+
+        actions_group = SettingCardGroup(self.tr('preset_actions'), widget)
+        actions_card = SettingCard(
+            FluentIcon.MENU,
+            self.tr('preset_actions'),
+            None,
+            parent=self,
+        )
+        action_container = QWidget()
+        action_row = QHBoxLayout(action_container)
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.setSpacing(8)
+        self.preset_add_btn = PrimaryPushButton(self.tr('preset_add'))
+        self.preset_add_btn.setIcon(FluentIcon.ADD)
         self.preset_add_btn.clicked.connect(self.add_preset)
         self.preset_edit_btn = QPushButton(self.tr('preset_edit'))
+        self.preset_edit_btn.setIcon(FluentIcon.EDIT)
         self.preset_edit_btn.clicked.connect(self.edit_selected_preset)
         self.preset_delete_btn = QPushButton(self.tr('preset_delete'))
+        self.preset_delete_btn.setIcon(FluentIcon.DELETE)
         self.preset_delete_btn.clicked.connect(self.remove_selected_preset)
         self.preset_reset_btn = QPushButton(self.tr('preset_reset'))
+        self.preset_reset_btn.setIcon(FluentIcon.UPDATE)
         self.preset_reset_btn.clicked.connect(self.reset_presets)
         action_row.addWidget(self.preset_add_btn)
         action_row.addWidget(self.preset_edit_btn)
         action_row.addWidget(self.preset_delete_btn)
         action_row.addStretch()
         action_row.addWidget(self.preset_reset_btn)
-        preset_layout.addLayout(action_row)
+        actions_card.hBoxLayout.addWidget(
+            action_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        actions_card.hBoxLayout.addSpacing(16)
+        actions_group.addSettingCard(actions_card)
+        layout.addWidget(actions_group)
 
-        reorder_row = QHBoxLayout()
+        order_group = SettingCardGroup(self.tr('preset_ordering'), widget)
+        self.preset_sort_combo = QComboBox()
+        sort_items = [
+            ("manual", self.tr("preset_sort_manual")),
+            ("name", self.tr("preset_sort_name")),
+            ("duration", self.tr("preset_sort_duration")),
+        ]
+        for key, label in sort_items:
+            self.preset_sort_combo.addItem(label, key)
+        current_sort = self._preset_sort_mode
+        for i in range(self.preset_sort_combo.count()):
+            if self.preset_sort_combo.itemData(i) == current_sort:
+                self.preset_sort_combo.setCurrentIndex(i)
+                break
+        self.preset_sort_combo.currentIndexChanged.connect(self._on_preset_sort_changed)
+        sort_card = SettingCard(
+            FluentIcon.FILTER,
+            self.tr("preset_sort_mode"),
+            None,
+            parent=self,
+        )
+        sort_card.hBoxLayout.addWidget(
+            self.preset_sort_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        sort_card.hBoxLayout.addSpacing(16)
+        order_group.addSettingCard(sort_card)
+
+        order_card = SettingCard(
+            FluentIcon.MOVE,
+            self.tr('preset_ordering'),
+            None,
+            parent=self,
+        )
+        reorder_container = QWidget()
+        reorder_row = QHBoxLayout(reorder_container)
+        reorder_row.setContentsMargins(0, 0, 0, 0)
+        reorder_row.setSpacing(8)
         self.preset_up_btn = QPushButton(self.tr('preset_move_up'))
+        self.preset_up_btn.setIcon(FluentIcon.UP)
         self.preset_up_btn.clicked.connect(lambda: self.move_selected_preset(-1))
         self.preset_down_btn = QPushButton(self.tr('preset_move_down'))
+        self.preset_down_btn.setIcon(FluentIcon.DOWN)
         self.preset_down_btn.clicked.connect(lambda: self.move_selected_preset(1))
         reorder_row.addWidget(self.preset_up_btn)
         reorder_row.addWidget(self.preset_down_btn)
         reorder_row.addStretch()
-        preset_layout.addLayout(reorder_row)
+        order_card.hBoxLayout.addWidget(
+            reorder_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        order_card.hBoxLayout.addSpacing(16)
+        order_group.addSettingCard(order_card)
+        layout.addWidget(order_group)
 
-        apply_row = QHBoxLayout()
-        self.preset_apply_btn = QPushButton(self.tr('preset_apply_to_timer'))
+        selection_group = SettingCardGroup(self.tr('preset_selection'), widget)
+        selection_card = SettingCard(
+            FluentIcon.CHECKBOX,
+            self.tr('preset_selection'),
+            None,
+            parent=self,
+        )
+        selection_container = QWidget()
+        selection_row = QHBoxLayout(selection_container)
+        selection_row.setContentsMargins(0, 0, 0, 0)
+        selection_row.setSpacing(8)
+        self.preset_select_all_btn = QPushButton(self.tr('preset_select_all'))
+        self.preset_select_all_btn.setIcon(FluentIcon.CHECKBOX)
+        self.preset_select_all_btn.clicked.connect(self.select_all_presets)
+        self.preset_clear_selection_btn = QPushButton(self.tr('preset_clear_selection'))
+        self.preset_clear_selection_btn.setIcon(FluentIcon.CLEAR_SELECTION)
+        self.preset_clear_selection_btn.clicked.connect(self.clear_preset_selection)
+        selection_row.addWidget(self.preset_select_all_btn)
+        selection_row.addWidget(self.preset_clear_selection_btn)
+        selection_row.addStretch()
+        selection_card.hBoxLayout.addWidget(
+            selection_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        selection_card.hBoxLayout.addSpacing(16)
+        selection_group.addSettingCard(selection_card)
+        layout.addWidget(selection_group)
+
+        apply_group = SettingCardGroup(self.tr('preset_apply_to_timer'), widget)
+        apply_card = SettingCard(
+            FluentIcon.PLAY,
+            self.tr('preset_apply_to_timer'),
+            None,
+            parent=self,
+        )
+        apply_container = QWidget()
+        apply_row = QHBoxLayout(apply_container)
+        apply_row.setContentsMargins(0, 0, 0, 0)
+        apply_row.setSpacing(8)
+        self.preset_apply_btn = PrimaryPushButton(self.tr('preset_apply_to_timer'))
+        self.preset_apply_btn.setIcon(FluentIcon.PLAY)
         self.preset_apply_btn.clicked.connect(self.apply_selected_preset_to_timer)
         apply_row.addWidget(self.preset_apply_btn)
         apply_row.addStretch()
-        preset_layout.addLayout(apply_row)
-
-        layout.addWidget(preset_group)
+        apply_card.hBoxLayout.addWidget(
+            apply_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        apply_card.hBoxLayout.addSpacing(16)
+        apply_group.addSettingCard(apply_card)
+        layout.addWidget(apply_group)
         layout.addStretch()
         widget.setLayout(layout)
 
@@ -988,30 +1131,100 @@ class SettingsDialog(QDialog):
         if not hasattr(self, 'preset_list'):
             return
         self.preset_list.clear()
-        for preset in self._preset_data:
-            item = QListWidgetItem(self._preset_summary(preset))
+        self._preset_list_indices = []
+        filter_text = (getattr(self, "_preset_filter_text", "") or "").strip().lower()
+        indices = list(range(len(self._preset_data)))
+        sort_mode = getattr(self, "_preset_sort_mode", "manual")
+        if sort_mode == "name":
+            indices.sort(
+                key=lambda i: self._resolve_preset_label(self._preset_data[i]).lower()
+            )
+        elif sort_mode == "duration":
+            indices.sort(key=lambda i: self._preset_total_seconds(self._preset_data[i]))
+        for idx in indices:
+            preset = self._preset_data[idx]
+            summary = self._preset_summary(preset)
+            if filter_text and filter_text not in summary.lower():
+                continue
+            item = QListWidgetItem(summary)
+            if filter_text:
+                font = item.font()
+                font.setBold(True)
+                item.setFont(font)
             item.setData(Qt.ItemDataRole.UserRole, preset.get('id'))
             self.preset_list.addItem(item)
+            self._preset_list_indices.append(idx)
 
     def _get_selected_preset_index(self):
         if not hasattr(self, 'preset_list'):
             return -1
         row = self.preset_list.currentRow()
-        if 0 <= row < len(self._preset_data):
-            return row
+        if 0 <= row < len(getattr(self, "_preset_list_indices", [])):
+            return self._preset_list_indices[row]
         return -1
 
     def _update_preset_button_states(self):
-        has_selection = self._get_selected_preset_index() != -1
-        for btn in [
-            getattr(self, 'preset_edit_btn', None),
-            getattr(self, 'preset_delete_btn', None),
-            getattr(self, 'preset_up_btn', None),
-            getattr(self, 'preset_down_btn', None),
-            getattr(self, 'preset_apply_btn', None),
-        ]:
-            if btn:
-                btn.setEnabled(has_selection)
+        selected = self._get_selected_preset_indices()
+        has_selection = len(selected) > 0
+        single_selection = len(selected) == 1
+        sort_manual = getattr(self, "_preset_sort_mode", "manual") == "manual"
+        edit_btn = getattr(self, 'preset_edit_btn', None)
+        up_btn = getattr(self, 'preset_up_btn', None)
+        down_btn = getattr(self, 'preset_down_btn', None)
+        apply_btn = getattr(self, 'preset_apply_btn', None)
+        if edit_btn is not None:
+            edit_btn.setEnabled(single_selection)
+        if apply_btn is not None:
+            apply_btn.setEnabled(single_selection)
+        if up_btn is not None:
+            up_btn.setEnabled(single_selection and sort_manual)
+        if down_btn is not None:
+            down_btn.setEnabled(single_selection and sort_manual)
+        delete_btn = getattr(self, 'preset_delete_btn', None)
+        if delete_btn is not None:
+            delete_btn.setEnabled(has_selection)
+        clear_btn = getattr(self, 'preset_clear_selection_btn', None)
+        if clear_btn is not None:
+            clear_btn.setEnabled(has_selection)
+
+    @staticmethod
+    def _preset_total_seconds(preset) -> int:
+        return (
+            max(0, int(preset.get("hours", 0))) * 3600
+            + max(0, int(preset.get("minutes", 0))) * 60
+            + max(0, int(preset.get("seconds", 0)))
+        )
+
+    def _get_selected_preset_indices(self):
+        if not hasattr(self, 'preset_list'):
+            return []
+        indices = []
+        for item in self.preset_list.selectedItems():
+            row = self.preset_list.row(item)
+            if 0 <= row < len(getattr(self, "_preset_list_indices", [])):
+                indices.append(self._preset_list_indices[row])
+        return sorted(set(indices))
+
+    def _on_preset_search_changed(self, text: str) -> None:
+        self._preset_filter_text = text or ""
+        self._refresh_preset_list()
+        self._update_preset_button_states()
+
+    def _on_preset_sort_changed(self, _index: int) -> None:
+        sort_mode = self.preset_sort_combo.currentData()
+        if sort_mode not in ("manual", "name", "duration"):
+            sort_mode = "manual"
+        self._preset_sort_mode = sort_mode
+        self._refresh_preset_list()
+        self._update_preset_button_states()
+
+    def select_all_presets(self):
+        if hasattr(self, 'preset_list'):
+            self.preset_list.selectAll()
+
+    def clear_preset_selection(self):
+        if hasattr(self, 'preset_list'):
+            self.preset_list.clearSelection()
 
     def add_preset(self):
         dialog = PresetEditorDialog(
@@ -1072,22 +1285,28 @@ class SettingsDialog(QDialog):
             self.preset_list.setCurrentRow(index)
 
     def remove_selected_preset(self):
-        index = self._get_selected_preset_index()
-        if index == -1:
+        indices = self._get_selected_preset_indices()
+        if not indices:
             return
+        if len(indices) == 1:
+            message = self.tr('preset_delete_confirm_msg')
+        else:
+            message = self.tr('preset_delete_confirm_msg_multi').format(len(indices))
         if not self._confirm(
             self.tr('preset_delete_confirm_title'),
-            self.tr('preset_delete_confirm_msg'),
+            message,
         ):
             return
-        self._preset_data.pop(index)
+        for index in sorted(indices, reverse=True):
+            self._preset_data.pop(index)
         self._refresh_preset_list()
         self._update_preset_button_states()
 
     def move_selected_preset(self, offset):
-        index = self._get_selected_preset_index()
-        if index == -1:
+        indices = self._get_selected_preset_indices()
+        if len(indices) != 1:
             return
+        index = indices[0]
         new_index = index + offset
         if not 0 <= new_index < len(self._preset_data):
             return
@@ -1109,9 +1328,10 @@ class SettingsDialog(QDialog):
         self._update_preset_button_states()
 
     def apply_selected_preset_to_timer(self):
-        index = self._get_selected_preset_index()
-        if index == -1:
+        indices = self._get_selected_preset_indices()
+        if len(indices) != 1:
             return
+        index = indices[0]
         preset = self._preset_data[index]
         self.mode_combo.setCurrentIndex(1)  # 倒计时
         self.hours_spin.setValue(int(preset.get('hours', 0)))
@@ -1468,7 +1688,14 @@ class SettingsDialog(QDialog):
             self.update_color_button(self.theme_color_btn, hex_color)
         if hasattr(self, 'theme_color_card'):
             self.theme_color_card.setContent(hex_color)
-            
+        if hasattr(self, 'theme_color_preset_buttons'):
+            theme_mode = None
+            if hasattr(self, 'theme_mode_combo'):
+                theme_mode = self.theme_mode_combo.currentData()
+            self._update_theme_color_presets(hex_color, theme_mode)
+            self._update_theme_color_custom_buttons(hex_color, theme_mode)
+        self.parent_window.apply_settings(preserve_elapsed=True)
+
     def choose_theme_color(self):
         """选择主题色"""
         color = self._pick_color(
@@ -1481,6 +1708,81 @@ class SettingsDialog(QDialog):
     def update_color_button(self, button, color):
         """更新颜色按钮的显示"""
         button.setStyleSheet(f'background-color: {color}; border: 1px solid #ccc;')
+
+    @staticmethod
+    def _normalize_theme_custom_colors(raw) -> list[str]:
+        colors = []
+        if isinstance(raw, list):
+            for item in raw:
+                if isinstance(item, str):
+                    colors.append(item.strip())
+        colors = colors[:2]
+        while len(colors) < 2:
+            colors.append("")
+        return colors
+
+    def _update_theme_color_presets(self, current_hex: str, theme_mode: str | None = None) -> None:
+        if theme_mode is None:
+            theme_mode = self.parent_window.settings.get("theme_mode", "auto")
+        border_selected = "#ffffff" if theme_mode == "dark" else "#222222"
+        border_default = "#666666"
+        for color, btn in getattr(self, "theme_color_preset_buttons", []):
+            border = border_selected if color.lower() == current_hex.lower() else border_default
+            btn.setStyleSheet(
+                f"background-color: {color}; border: 2px solid {border}; border-radius: 4px;"
+            )
+
+    def _update_theme_color_custom_buttons(self, current_hex: str, theme_mode: str | None = None) -> None:
+        if theme_mode is None:
+            theme_mode = self.parent_window.settings.get("theme_mode", "auto")
+        border_selected = "#ffffff" if theme_mode == "dark" else "#222222"
+        border_default = "#666666"
+        colors = self._normalize_theme_custom_colors(
+            self.parent_window.settings.get("theme_custom_colors", [])
+        )
+        self.parent_window.settings["theme_custom_colors"] = colors
+        for idx, btn in getattr(self, "theme_color_custom_buttons", []):
+            color = colors[idx] if idx < len(colors) else ""
+            if color:
+                border = border_selected if color.lower() == current_hex.lower() else border_default
+                btn.setText("")
+                btn.setStyleSheet(
+                    f"background-color: {color}; border: 2px solid {border}; border-radius: 4px;"
+                )
+            else:
+                btn.setText("+")
+                btn.setStyleSheet(
+                    "background-color: transparent; border: 1px dashed #888; border-radius: 4px;"
+                )
+
+    def _preview_theme_change(self, _index: int) -> None:
+        theme_key = self.theme_mode_combo.currentData()
+        if theme_key not in ("auto", "light", "dark"):
+            theme_key = "auto"
+        self.parent_window.settings["theme_mode"] = theme_key
+        self._update_theme_color_presets(
+            self.parent_window.settings.get("theme_color", "#0078D4"),
+            theme_key,
+        )
+        self._update_theme_color_custom_buttons(
+            self.parent_window.settings.get("theme_color", "#0078D4"),
+            theme_key,
+        )
+        self.parent_window.apply_settings(preserve_elapsed=True)
+
+    def _choose_custom_theme_color(self, index: int) -> None:
+        colors = self._normalize_theme_custom_colors(
+            self.parent_window.settings.get("theme_custom_colors", [])
+        )
+        initial = colors[index] if index < len(colors) and colors[index] else self.parent_window.settings.get(
+            "theme_color",
+            "#0078D4",
+        )
+        picked = self._pick_color(self.tr("theme_color"), initial)
+        if picked is not None and picked.isValid():
+            colors[index] = picked.name()
+            self.parent_window.settings["theme_custom_colors"] = colors
+            self._set_theme_color(picked.name())
         
     def choose_sound_file(self):
         """选择铃声文件"""
@@ -1687,6 +1989,10 @@ class SettingsDialog(QDialog):
         self.parent_window.settings["theme_color"] = self.parent_window.settings.get(
             "theme_color", "#0078D4"
         )
+        sort_mode = self.preset_sort_combo.currentData()
+        if sort_mode not in ("manual", "name", "duration"):
+            sort_mode = "manual"
+        self.parent_window.settings["preset_sort_mode"] = sort_mode
         
         # 保存启动模式行为
         self.parent_window.settings['startup_mode_behavior'] = 'restore' if self.startup_behavior_combo.currentIndex() == 0 else 'fixed'
@@ -1723,6 +2029,9 @@ class SettingsDialog(QDialog):
     def reject(self):
         if not getattr(self, "_applied_once", False):
             self.parent_window.settings["language"] = self._initial_lang_code
+            self.parent_window.settings["theme_mode"] = self._initial_theme_mode
+            self.parent_window.settings["theme_color"] = self._initial_theme_color
+            self.parent_window.settings["theme_custom_colors"] = list(self._initial_theme_custom_colors)
             self.parent_window.apply_settings(preserve_elapsed=True)
             self.parent_window.create_tray_menu()
             try:

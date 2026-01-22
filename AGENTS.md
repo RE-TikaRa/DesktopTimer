@@ -39,7 +39,7 @@ DesktopTimer/
 
 - **SettingsDialog**
   - 五个 Tab（外观/模式/预设/通用/关于），通过父窗口 settings 获取/写回数据。
-  - 预设 Tab 支持增删改查、拖动排序、恢复默认；预设编辑器支持多语言名称。
+  - 预设 Tab 支持搜索、增删改查、拖动排序、多选删除、排序方式记忆、恢复默认；预设编辑器支持多语言名称。
   - 保存时调用 `_serialize_presets()` 写回 `countdown_presets`，随后触发 `TimerWindow.apply_settings()` 与 `reload_shortcuts()`。
 
 - **localization.py**

@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon,
     QVBoxLayout,
 )
-from qfluentwidgets import FluentStyleSheet, Theme, setTheme, setThemeColor
+from qfluentwidgets import FluentIcon, FluentStyleSheet, Theme, setTheme, setThemeColor
 
 try:
     from win10toast import ToastNotifier
@@ -281,6 +281,7 @@ class TimerWindow(QMainWindow):
             "enable_windows_toast": True,
             "theme_mode": "auto",
             "theme_color": "#0078D4",
+            "theme_custom_colors": ["", ""],
             # 语言设置
             "language": "zh_CN",
             # 时钟模式设置
@@ -298,6 +299,7 @@ class TimerWindow(QMainWindow):
             "shortcuts": dict(DEFAULT_SHORTCUTS),
             # 倒计时预设
             "countdown_presets": [dict(preset) for preset in DEFAULT_COUNTDOWN_PRESETS],
+            "preset_sort_mode": "manual",
         }
         
         if os.path.exists(self.settings_file):
@@ -924,8 +926,11 @@ class TimerWindow(QMainWindow):
         """������ͼ��/�Ҽ��˵��еĿ��ٹ���˵�"""
         preset_menu = QMenu(self.tr('mode_switch_menu'), self)
         self._apply_menu_style(preset_menu)
+        preset_menu.setIcon(FluentIcon.MENU.icon())
 
         countup_action = QAction(self.tr('count_up_mode'), self)
+        self._apply_action_icon(countup_action, FluentIcon.STOP_WATCH)
+        countup_action.setCheckable(True)
         countup_action.triggered.connect(self.switch_to_count_up)
         preset_menu.addAction(countup_action)
 
@@ -933,6 +938,7 @@ class TimerWindow(QMainWindow):
 
         countdown_menu = QMenu(self.tr('countdown_mode'), self)
         self._apply_menu_style(countdown_menu)
+        countdown_menu.setIcon(FluentIcon.CALENDAR.icon())
         countdown_presets = self.settings.get('countdown_presets', [])
         if countdown_presets:
             for preset in countdown_presets:
@@ -952,6 +958,7 @@ class TimerWindow(QMainWindow):
             countdown_menu.addAction(placeholder)
         countdown_menu.addSeparator()
         custom_action = QAction(self.tr('custom_countdown_once'), self)
+        self._apply_action_icon(custom_action, FluentIcon.EDIT)
         custom_action.triggered.connect(self.prompt_custom_countdown)
         countdown_menu.addAction(custom_action)
         preset_menu.addMenu(countdown_menu)
@@ -959,8 +966,20 @@ class TimerWindow(QMainWindow):
         preset_menu.addSeparator()
 
         clock_action = QAction(self.tr('clock_mode'), self)
+        self._apply_action_icon(clock_action, FluentIcon.DATE_TIME)
+        clock_action.setCheckable(True)
         clock_action.triggered.connect(self.switch_to_clock_mode)
         preset_menu.addAction(clock_action)
+
+        mode_key = self.settings.get('timer_mode_key') or self.derive_mode_key(
+            self.settings.get('timer_mode', '')
+        )
+        countup_action.setChecked(mode_key == 'countup')
+        clock_action.setChecked(mode_key == 'clock')
+        countdown_action = countdown_menu.menuAction()
+        if countdown_action is not None:
+            countdown_action.setCheckable(True)
+            countdown_action.setChecked(mode_key == 'countdown')
 
         return preset_menu
         
@@ -972,11 +991,18 @@ class TimerWindow(QMainWindow):
         # 开始/暂停动作
         pause_text = self.tr('pause') if self.is_running else self.tr('continue')
         self.pause_action = QAction(pause_text, self)
+        self._apply_action_icon(
+            self.pause_action,
+            FluentIcon.PAUSE if self.is_running else FluentIcon.PLAY,
+        )
+        self.pause_action.setCheckable(True)
+        self.pause_action.setChecked(self.is_running)
         self.pause_action.triggered.connect(self.toggle_pause)
         tray_menu.addAction(self.pause_action)
         
         # 重置动作
         reset_action = QAction(self.tr('reset'), self)
+        self._apply_action_icon(reset_action, FluentIcon.RETURN)
         reset_action.triggered.connect(self.reset_timer)
         tray_menu.addAction(reset_action)
         
@@ -984,34 +1010,45 @@ class TimerWindow(QMainWindow):
         tray_menu.addMenu(self.build_quick_presets_menu())
         
         tray_menu.addSeparator()
-        
-        # 设置动作
+        window_menu = QMenu(self.tr('window_menu'), self)
+        self._apply_menu_style(window_menu)
+        window_menu.setIcon(FluentIcon.VIEW.icon())
+
         settings_action = QAction(self.tr('settings'), self)
+        self._apply_action_icon(settings_action, FluentIcon.SETTING)
         settings_action.triggered.connect(self.show_settings)
-        tray_menu.addAction(settings_action)
-        
-        # 显示/隐藏动作
+        window_menu.addAction(settings_action)
+
         toggle_action = QAction(self.tr('show_hide'), self)
+        self._apply_action_icon(
+            toggle_action,
+            FluentIcon.HIDE if self.isVisible() else FluentIcon.VIEW,
+        )
         toggle_action.triggered.connect(self.toggle_visibility)
-        tray_menu.addAction(toggle_action)
+        window_menu.addAction(toggle_action)
 
         fullscreen_text = self.tr('exit_fullscreen') if self.is_fullscreen else self.tr('enter_fullscreen')
         fullscreen_action = QAction(fullscreen_text, self)
+        self._apply_action_icon(fullscreen_action, FluentIcon.FULL_SCREEN)
         fullscreen_action.triggered.connect(self.toggle_fullscreen)
-        tray_menu.addAction(fullscreen_action)
-        
-        tray_menu.addSeparator()
-        
-        # 锁定/解锁动作
+        window_menu.addAction(fullscreen_action)
+
         lock_text = self.tr('unlock_window') if self.is_locked else self.tr('lock_window')
         lock_action = QAction(lock_text, self)
+        self._apply_action_icon(
+            lock_action,
+            FluentIcon.UNPIN if self.is_locked else FluentIcon.PIN,
+        )
         lock_action.triggered.connect(self.toggle_lock)
-        tray_menu.addAction(lock_action)
+        window_menu.addAction(lock_action)
+
+        tray_menu.addMenu(window_menu)
         
         tray_menu.addSeparator()
         
         # 退出动作
         quit_action = QAction(self.tr('quit'), self)
+        self._apply_action_icon(quit_action, FluentIcon.POWER_BUTTON)
         quit_action.triggered.connect(self.quit_app)
         tray_menu.addAction(quit_action)
         
@@ -1530,45 +1567,61 @@ class TimerWindow(QMainWindow):
         
         # 暂停/继续
         pause_action = QAction(self.tr('pause') if self.is_running else self.tr('continue'), self)
+        self._apply_action_icon(
+            pause_action,
+            FluentIcon.PAUSE if self.is_running else FluentIcon.PLAY,
+        )
         pause_action.triggered.connect(self.toggle_pause)
         menu.addAction(pause_action)
         
         # 重置
         reset_action = QAction(self.tr('reset'), self)
+        self._apply_action_icon(reset_action, FluentIcon.RETURN)
         reset_action.triggered.connect(self.reset_timer)
         menu.addAction(reset_action)
         
         menu.addSeparator()
         menu.addMenu(self.build_quick_presets_menu())
         menu.addSeparator()
-        
-        # 锁定/解锁窗口
-        lock_text = self.tr('unlock_window') if self.is_locked else self.tr('lock_window')
-        lock_action = QAction(lock_text, self)
-        lock_action.triggered.connect(self.toggle_lock)
-        menu.addAction(lock_action)
-        
-        menu.addSeparator()
-        
-        # 设置
+        window_menu = QMenu(self.tr('window_menu'), self)
+        self._apply_menu_style(window_menu)
+        window_menu.setIcon(FluentIcon.VIEW.icon())
+
         settings_action = QAction(self.tr('settings'), self)
+        self._apply_action_icon(settings_action, FluentIcon.SETTING)
         settings_action.triggered.connect(self.show_settings)
-        menu.addAction(settings_action)
-        
-        # 显示/隐藏
+        window_menu.addAction(settings_action)
+
         hide_action = QAction(self.tr('show_hide'), self)
-        hide_action.triggered.connect(self.hide)
-        menu.addAction(hide_action)
+        self._apply_action_icon(
+            hide_action,
+            FluentIcon.HIDE if self.isVisible() else FluentIcon.VIEW,
+        )
+        hide_action.triggered.connect(self.toggle_visibility)
+        window_menu.addAction(hide_action)
 
         fullscreen_text = self.tr('exit_fullscreen') if self.is_fullscreen else self.tr('enter_fullscreen')
         fullscreen_action = QAction(fullscreen_text, self)
+        self._apply_action_icon(fullscreen_action, FluentIcon.FULL_SCREEN)
         fullscreen_action.triggered.connect(self.toggle_fullscreen)
-        menu.addAction(fullscreen_action)
+        window_menu.addAction(fullscreen_action)
+
+        lock_text = self.tr('unlock_window') if self.is_locked else self.tr('lock_window')
+        lock_action = QAction(lock_text, self)
+        self._apply_action_icon(
+            lock_action,
+            FluentIcon.UNPIN if self.is_locked else FluentIcon.PIN,
+        )
+        lock_action.triggered.connect(self.toggle_lock)
+        window_menu.addAction(lock_action)
+
+        menu.addMenu(window_menu)
         
         menu.addSeparator()
         
         # 退出
         quit_action = QAction(self.tr('quit'), self)
+        self._apply_action_icon(quit_action, FluentIcon.POWER_BUTTON)
         quit_action.triggered.connect(self.quit_app)
         menu.addAction(quit_action)
         
@@ -1577,6 +1630,13 @@ class TimerWindow(QMainWindow):
     def _apply_menu_style(self, menu: QMenu) -> None:
         FluentStyleSheet.MENU.apply(menu)
         menu.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+    @staticmethod
+    def _apply_action_icon(action: QAction, fluent_icon: FluentIcon) -> None:
+        try:
+            action.setIcon(fluent_icon.icon())
+        except Exception:
+            pass
         
     def switch_to_count_up(self):
         """切换到正计时"""
