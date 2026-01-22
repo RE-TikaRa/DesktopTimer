@@ -52,7 +52,7 @@ DesktopTimer/
 ## 常用命令
 - 安装依赖：`uv sync`
 - 运行调试：`uv run python main.py`
-- 打包：先 `uv sync --dev`，再 `uv run python -m PyInstaller DesktopTimer.spec --noconfirm`；记得将 `img/ lang/ sounds/ settings/` 复制到 `dist/`
+- 打包：先 `uv sync --dev`，再 `uv run python -m PyInstaller DesktopTimer.spec --noconfirm`；记得将 `img/ lang/ sounds/` 复制到 `dist/`
 - 一键打包：`tools\pyinstaller.bat`（清理 → 同步 → 构建 → 复制资源 → 压缩）
 - DEBUG 日志：运行前设置 `DESKTOPTIMER_DEBUG=1` 可输出更详细日志
 

@@ -36,7 +36,7 @@ if errorlevel 1 goto :fail
 echo %C_YELLOW%[4/5] Copying resource folders...%C_RESET%
 set "DIST_DIR=dist"
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
-for %%D in (img lang sounds settings) do (
+for %%D in (img lang sounds) do (
     if exist "%%D" (
         echo   - %%D
         xcopy "%%D" "%DIST_DIR%\%%D\" /E /I /Y >nul
@@ -53,7 +53,7 @@ echo.
 echo %C_GREEN%[OK]%C_RESET% Build complete.
 echo EXE: %DIST_DIR%\DesktopTimer.exe
 echo ZIP: DesktopTimer.zip
-echo RES: %DIST_DIR%\img  %DIST_DIR%\lang  %DIST_DIR%\sounds  %DIST_DIR%\settings
+echo RES: %DIST_DIR%\img  %DIST_DIR%\lang  %DIST_DIR%\sounds
 goto :done
 
 :fail
