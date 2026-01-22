@@ -9,7 +9,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,36 +25,27 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        display: ['"Outfit"', '"Noto Sans SC"', 'sans-serif'],
+                        body: ['"Noto Sans SC"', 'sans-serif'],
                     },
                     colors: {
-                        primary: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            200: '#99f6e4',
-                            300: '#5eead4',
-                            400: '#2dd4bf',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                            700: '#0f766e',
-                            800: '#115e59',
-                            900: '#134e4a',
-                        }
-                    },
-                    animation: {
-                        'blob': 'blob 7s infinite',
-                        'text-shimmer': 'text-shimmer 2.5s ease-out infinite alternate',
-                    },
-                    keyframes: {
-                        blob: {
-                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
                         },
-                        'text-shimmer': {
-                            '0%': { backgroundPosition: '0% 50%' },
-                            '100%': { backgroundPosition: '100% 50%' },
+                        ember: {
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
                         }
                     }
                 }
@@ -63,63 +54,248 @@
     </script>
     
     <style>
-        /* Custom Glassmorphism & Utilities */
-        .glass {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        :root {
+            --bg: #f4f7fb;
+            --ink: #0f172a;
+            --muted: #475569;
+            --card: rgba(255, 255, 255, 0.78);
+            --border: rgba(15, 23, 42, 0.08);
+            --accent: #3b82f6;
+            --accent-2: #f97316;
         }
-        .dark .glass {
-            background: rgba(17, 24, 39, 0.7);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        /* Grid Background Pattern */
-        .bg-grid-slate-100 {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(241 245 249 / 0.6)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
-        }
-        .dark .bg-grid-slate-900 {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(15 23 42 / 0.3)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-        }
-        .dark .glass-card {
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        .dark {
+            --bg: #0b101a;
+            --ink: #e5e7eb;
+            --muted: #94a3b8;
+            --card: rgba(17, 24, 39, 0.68);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #60a5fa;
+            --accent-2: #fb923c;
         }
 
+        body {
+            background: var(--bg);
+            color: var(--ink);
+        }
+
+        .bg-mesh {
+            background:
+                radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.22), transparent 60%),
+                radial-gradient(900px 520px at 95% 12%, rgba(249, 115, 22, 0.18), transparent 55%),
+                radial-gradient(900px 520px at 40% 90%, rgba(14, 165, 233, 0.16), transparent 60%);
+            animation: mesh-shift 26s ease-in-out infinite;
+        }
+        .dark .bg-mesh {
+            background:
+                radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.18), transparent 60%),
+                radial-gradient(900px 520px at 95% 12%, rgba(251, 146, 60, 0.18), transparent 55%),
+                radial-gradient(900px 520px at 40% 90%, rgba(96, 165, 250, 0.12), transparent 60%);
+        }
+        .noise {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+            opacity: 0.35;
+            mix-blend-mode: soft-light;
+        }
+
+        .text-ink {
+            color: var(--ink);
+        }
+        .text-muted {
+            color: var(--muted);
+        }
+
+        .nav-shell {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            position: relative;
+        }
+        .dark .nav-shell {
+            background: rgba(15, 23, 42, 0.68);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+        }
+        .nav-link {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            transition: color 0.2s ease, background 0.2s ease;
+        }
+        .nav-link:hover {
+            color: var(--ink);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .dark .nav-link:hover {
+            background: rgba(59, 130, 246, 0.18);
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+            transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 55px rgba(15, 23, 42, 0.18);
+        }
+
+        .feature-frame {
+            background: linear-gradient(120deg, rgba(59, 130, 246, 0.5), rgba(249, 115, 22, 0.35), rgba(37, 99, 235, 0.4));
+            padding: 1px;
+            border-radius: 24px;
+        }
+        .feature-inner {
+            background: var(--card);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+        }
+        .glow-shell {
+            position: relative;
+            z-index: 1;
+        }
+        .glow-shell::before {
+            content: "";
+            position: absolute;
+            inset: -14px;
+            border-radius: 32px;
+            background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.25), transparent 60%),
+                        radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.2), transparent 55%);
+            filter: blur(12px);
+            z-index: -1;
+            opacity: 0.85;
+            animation: halo-pulse 10s ease-in-out infinite;
+        }
+        .dark .glow-shell::before {
+            background: radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.2), transparent 60%),
+                        radial-gradient(circle at 80% 0%, rgba(251, 146, 60, 0.2), transparent 55%);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(249, 115, 22, 0.28);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 36px rgba(249, 115, 22, 0.35);
+        }
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid var(--border);
+            color: var(--ink);
+            transition: transform 0.25s ease, border 0.25s ease;
+        }
+        .dark .btn-ghost {
+            background: rgba(15, 23, 42, 0.65);
+        }
+        .btn-ghost:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+
+        .tag {
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            background: rgba(59, 130, 246, 0.08);
+            color: var(--ink);
+        }
+        .dark .tag {
+            border: 1px solid rgba(96, 165, 250, 0.25);
+            background: rgba(96, 165, 250, 0.08);
+        }
+
+        .display-title {
+            letter-spacing: 0.02em;
+        }
         .text-gradient {
-            background: linear-gradient(to right, #0d9488, #0f766e, #0d9488);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: text-shimmer 3s linear infinite;
-        }
-        .dark .text-gradient {
-            background: linear-gradient(to right, #2dd4bf, #14b8a6, #2dd4bf);
+            background: linear-gradient(120deg, var(--accent), var(--accent-2), var(--accent));
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
-        /* 3D Transform for Hero Image */
-        .hero-perspective {
-            perspective: 1000px;
+
+        .bg-dots {
+            background-image: radial-gradient(rgba(59, 130, 246, 0.22) 1.2px, transparent 0);
+            background-size: 34px 34px;
+            opacity: 0.45;
+            animation: float-dots 16s ease-in-out infinite;
         }
-        .hero-rotate {
-            transform: rotateX(2deg) rotateY(-2deg);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        .bg-dots-2 {
+            background-image: radial-gradient(rgba(249, 115, 22, 0.18) 1.6px, transparent 0);
+            background-size: 56px 56px;
+            opacity: 0.28;
+            filter: blur(0.3px);
+            animation: float-dots-2 22s ease-in-out infinite;
         }
-        .hero-rotate:hover {
-            transform: rotateX(0) rotateY(0) scale(1.02);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        .dark .bg-dots {
+            background-image: radial-gradient(rgba(96, 165, 250, 0.2) 1.2px, transparent 0);
+        }
+        .dark .bg-dots-2 {
+            background-image: radial-gradient(rgba(251, 146, 60, 0.2) 1.6px, transparent 0);
+        }
+
+        a:focus-visible,
+        button:focus-visible {
+            outline: 2px solid rgba(59, 130, 246, 0.6);
+            outline-offset: 3px;
+        }
+        .dark a:focus-visible,
+        .dark button:focus-visible {
+            outline-color: rgba(96, 165, 250, 0.6);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+            .bg-mesh,
+            .bg-dots,
+            .bg-dots-2,
+            .glow-orb,
+            .glow-shell::before {
+                animation: none !important;
+            }
+        }
+
+        .glow-orb {
+            border-radius: 999px;
+            filter: blur(40px);
+            opacity: 0.55;
+            animation: orb-drift 18s ease-in-out infinite;
+        }
+        .glow-orb--a {
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.5), transparent 65%);
+        }
+        .glow-orb--b {
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.45), transparent 65%);
+            animation-duration: 24s;
+        }
+
+        @keyframes float-dots {
+            0% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(14px, 20px, 0); }
+            100% { transform: translate3d(0, 0, 0); }
+        }
+        @keyframes float-dots-2 {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(-18px, 12px, 0) scale(1.02); }
+            100% { transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes mesh-shift {
+            0% { background-position: 0% 0%, 100% 0%, 50% 100%; }
+            50% { background-position: 10% 10%, 85% 5%, 45% 90%; }
+            100% { background-position: 0% 0%, 100% 0%, 50% 100%; }
+        }
+        @keyframes halo-pulse {
+            0% { opacity: 0.6; transform: scale(0.98); }
+            50% { opacity: 0.9; transform: scale(1.02); }
+            100% { opacity: 0.6; transform: scale(0.98); }
+        }
+        @keyframes orb-drift {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(24px, -18px, 0) scale(1.05); }
+            100% { transform: translate3d(0, 0, 0) scale(1); }
         }
     </style>
     <script>
@@ -130,85 +306,139 @@
         }
     </script>
 </head>
-<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-sans antialiased selection:bg-primary-200 dark:selection:bg-primary-900 relative">
-    <!-- Background Grid -->
+<body class="font-body antialiased relative selection:bg-brand-200 dark:selection:bg-brand-900">
+    <!-- Atmospheric Background -->
     <div class="fixed inset-0 z-0 pointer-events-none">
-        <div class="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-900 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]"></div>
+        <div class="absolute inset-0 bg-mesh"></div>
+        <div class="absolute inset-0 bg-dots"></div>
+        <div class="absolute inset-0 bg-dots-2"></div>
+        <div class="absolute -top-32 left-[-10%] w-[420px] h-[420px] glow-orb glow-orb--a"></div>
+        <div class="absolute bottom-[-15%] right-[-5%] w-[520px] h-[520px] glow-orb glow-orb--b"></div>
+        <div class="absolute inset-0 noise"></div>
     </div>
 
     <!-- Navbar -->
-    <nav class="fixed w-full z-50 glass transition-all duration-300" id="navbar">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
-                    <img src="logo.svg" alt="Logo" class="h-8 w-auto">
-                    <span class="font-bold text-xl tracking-tight">Desktop Timer</span>
+    <nav class="fixed w-full z-50" id="navbar">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mt-4 flex items-center justify-between nav-shell rounded-full px-5 py-3">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <img src="logo.svg" alt="Logo" class="h-9 w-auto">
+                    <div class="leading-none">
+                        <p class="font-display text-lg text-ink">Desktop Timer</p>
+                        <p class="text-xs text-muted tracking-wide">专注 · 轻量 · 开源</p>
+                    </div>
                 </div>
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#home" class="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">首页</a>
-                    <a href="#features" class="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">功能</a>
-                    <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">GitHub</a>
-                    
-                    <!-- Theme Toggle -->
-                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none">
-                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
-                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="#home" class="nav-link text-sm text-muted">首页</a>
+                    <a href="#features" class="nav-link text-sm text-muted">功能</a>
+                    <a href="https://re-tikara.fun/Blog/posts/998ef9dc/" target="_blank" class="nav-link text-sm text-muted">查看文档</a>
+                    <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="nav-link text-sm text-muted">GitHub</a>
+                    <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="px-4 py-2 rounded-full btn-ghost text-sm font-medium">查看源码</a>
+                    <a href="https://github.com/RE-TikaRa/DesktopTimer/releases/latest" target="_blank" class="px-4 py-2 rounded-full btn-primary text-sm font-medium">立即下载</a>
+                    <button id="theme-toggle" aria-label="切换主题" class="p-2 rounded-full hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors focus:outline-none">
+                        <i class="fas fa-moon dark:hidden text-slate-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-amber-300"></i>
                     </button>
                 </div>
-                <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center">
-                    <button id="mobile-theme-toggle" class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none">
-                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
-                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    <button id="mobile-theme-toggle" aria-label="切换主题" class="p-2 mr-2 rounded-full hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors focus:outline-none">
+                        <i class="fas fa-moon dark:hidden text-slate-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-amber-300"></i>
                     </button>
-                    <button id="mobile-menu-btn" class="p-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none">
-                        <i class="fas fa-bars text-xl"></i>
+                    <button id="mobile-menu-btn" aria-label="打开菜单" class="p-2 rounded-full text-slate-700 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-slate-800/70 focus:outline-none">
+                        <i class="fas fa-bars text-lg"></i>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden md:hidden glass border-t border-gray-200 dark:border-gray-700 absolute w-full left-0 top-16">
-            <div class="px-4 pt-2 pb-4 space-y-1">
-                <a href="#home" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onclick="document.getElementById('mobile-menu').classList.add('hidden')">首页</a>
-                <a href="#features" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onclick="document.getElementById('mobile-menu').classList.add('hidden')">功能</a>
-                <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">GitHub</a>
+        <div id="mobile-menu" class="hidden md:hidden absolute w-full left-0 top-[4.5rem]">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="nav-shell rounded-3xl px-6 py-4 mt-3">
+                    <div class="grid gap-2">
+                        <a href="#home" class="nav-link text-sm text-muted block" onclick="document.getElementById('mobile-menu').classList.add('hidden')">首页</a>
+                        <a href="#features" class="nav-link text-sm text-muted block" onclick="document.getElementById('mobile-menu').classList.add('hidden')">功能</a>
+                        <a href="https://re-tikara.fun/Blog/posts/998ef9dc/" target="_blank" class="nav-link text-sm text-muted block">查看文档</a>
+                        <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="nav-link text-sm text-muted block">GitHub</a>
+                        <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="px-3 py-2 rounded-2xl btn-ghost text-sm font-medium text-center">查看源码</a>
+                        <a href="https://github.com/RE-TikaRa/DesktopTimer/releases/latest" target="_blank" class="px-3 py-2 rounded-2xl btn-primary text-sm font-medium text-center">立即下载</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <section id="home" class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <!-- Background Blobs -->
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-[-1] overflow-hidden pointer-events-none">
-            <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-300/20 rounded-full blur-[100px] animate-pulse"></div>
-            <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-300/20 rounded-full blur-[100px] animate-pulse" style="animation-delay: 1s;"></div>
-        </div>
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div data-aos="fade-up" data-aos-duration="1000">
-                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
-                    <span class="block text-gray-900 dark:text-white">Desktop Timer</span>
-                    <span class="block text-gradient mt-2">简单 · 高效 · 专注</span>
-                </h1>
-                <p class="mt-4 text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                    一款轻量级的桌面倒计时工具，助您更好地管理时间，提升工作与学习效率。
-                </p>
-                
-                <div class="mt-10 flex justify-center gap-4">
-                    <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="px-8 py-3 rounded-full bg-primary-600 hover:bg-primary-700 text-white font-semibold text-lg shadow-lg hover:shadow-primary-500/30 transition-all transform hover:-translate-y-1">
-                        <i class="fab fa-github mr-2"></i> 获取源码
-                    </a>
-                    <a href="#features" class="px-8 py-3 rounded-full glass-card text-gray-700 dark:text-gray-200 font-semibold text-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all transform hover:-translate-y-1">
-                        了解更多
-                    </a>
+    <section id="home" class="relative pt-32 pb-24 lg:pt-44 lg:pb-28 overflow-hidden">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-[1.1fr,0.9fr] gap-14 items-center">
+                <div data-aos="fade-up" data-aos-duration="900">
+                    <span class="tag inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] mb-6">
+                        <i class="fas fa-hourglass-half text-amber-500"></i>
+                        开源桌面计时器
+                    </span>
+                    <h1 class="font-display display-title text-5xl md:text-6xl lg:text-7xl leading-tight">
+                        让专注有节奏，
+                        <span class="block text-gradient">把时间变成形状</span>
+                    </h1>
+                    <p class="mt-6 text-lg md:text-xl text-muted leading-relaxed max-w-xl">
+                        Desktop Timer 是一款极简却有质感的桌面倒计时工具，帮你快速进入深度工作状态，清晰掌控每一个节拍。
+                    </p>
+                    <div class="mt-8 flex flex-wrap gap-4">
+                        <a href="https://github.com/RE-TikaRa/DesktopTimer/releases/latest" target="_blank" class="btn-primary px-7 py-3 rounded-full text-sm font-semibold inline-flex items-center gap-2">
+                            <i class="fas fa-download"></i>
+                            立即下载
+                        </a>
+                        <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="btn-ghost px-7 py-3 rounded-full text-sm font-semibold inline-flex items-center gap-2">
+                            <i class="fab fa-github"></i>
+                            查看源码
+                        </a>
+                        <a href="https://re-tikara.fun/Blog/posts/998ef9dc/" target="_blank" class="btn-ghost px-7 py-3 rounded-full text-sm font-semibold inline-flex items-center gap-2">
+                            <i class="fas fa-book"></i>
+                            查看文档
+                        </a>
+                    </div>
+                    <div class="mt-10 grid grid-cols-3 gap-4">
+                        <div class="card rounded-2xl px-4 py-3">
+                            <p class="text-xs text-muted uppercase tracking-wider">轻量</p>
+                            <p class="font-display text-lg text-ink">秒开即用</p>
+                        </div>
+                        <div class="card rounded-2xl px-4 py-3">
+                            <p class="text-xs text-muted uppercase tracking-wider">专注</p>
+                            <p class="font-display text-lg text-ink">节奏清晰</p>
+                        </div>
+                        <div class="card rounded-2xl px-4 py-3">
+                            <p class="text-xs text-muted uppercase tracking-wider">开源</p>
+                            <p class="font-display text-lg text-ink">自由定制</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="mt-20 hero-perspective" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000">
-                <div class="hero-rotate relative rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-900">
-                    <img src="https://s2.loli.net/2026/01/03/gwsnTtV5JeKc1xQ.png" alt="Desktop Timer Preview" class="w-full h-auto">
+                <div class="relative" data-aos="fade-left" data-aos-duration="900">
+                    <div class="absolute -top-6 -right-6 hidden lg:flex items-center gap-3 card rounded-2xl px-4 py-3">
+                        <div class="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
+                            <i class="fas fa-bolt text-amber-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted">专注模式</p>
+                            <p class="font-display text-base">纯净无干扰</p>
+                        </div>
+                    </div>
+                    <div class="feature-frame glow-shell">
+                        <div class="feature-inner p-3">
+                            <img src="https://s2.loli.net/2026/01/03/gwsnTtV5JeKc1xQ.png" alt="Desktop Timer Preview" class="w-full rounded-2xl">
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-8 left-4 card rounded-2xl px-4 py-3 flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-500/20 flex items-center justify-center">
+                            <i class="fas fa-language text-brand-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted">中英双语</p>
+                            <p class="font-display text-base">自动匹配系统</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -216,98 +446,133 @@
 
     <!-- Features Section -->
     <section id="features" class="py-24 relative">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-32">
-            
-            <!-- Feature 1 -->
-            <div class="flex flex-col lg:flex-row items-center gap-16">
-                <div class="lg:w-1/2" data-aos="fade-right">
-                    <div class="relative rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                         <img src="https://s2.loli.net/2026/01/03/Za3LYTPyCmUWSzM.png" alt="Multi-language Support" class="w-full h-auto">
-                    </div>
-                </div>
-                <div class="lg:w-1/2" data-aos="fade-left">
-                    <div class="flex items-center gap-4 mb-4">
-                        <span class="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                            <i class="fas fa-globe text-xl"></i>
-                        </span>
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">多语言支持</h3>
-                    </div>
-                    <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-                        内置中文与英文语言包，根据您的系统环境或个人喜好自由切换，打破语言障碍。
-                    </p>
-                </div>
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto" data-aos="fade-up">
+                <span class="tag inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.3em]">
+                    功能亮点
+                </span>
+                <h2 class="font-display text-4xl md:text-5xl mt-6">更顺滑的专注流程</h2>
+                <p class="mt-4 text-muted text-lg">
+                    简洁只是表象，细节才是体验。每一个功能都围绕「专注」而设计。
+                </p>
             </div>
 
-            <!-- Feature 2 -->
-            <div class="flex flex-col lg:flex-row-reverse items-center gap-16">
-                <div class="lg:w-1/2" data-aos="fade-left">
-                    <div class="relative rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                        <img src="https://s2.loli.net/2026/01/03/wdzW5mYgORhbLeU.png" alt="Settings Page" class="w-full h-auto">
+            <div class="mt-16 space-y-16">
+                <div class="grid lg:grid-cols-[0.95fr,1.05fr] gap-12 items-center">
+                    <div data-aos="fade-right">
+                        <div class="feature-frame">
+                            <div class="feature-inner p-3">
+                                <img src="https://s2.loli.net/2026/01/03/Za3LYTPyCmUWSzM.png" alt="Multi-language Support" class="w-full rounded-2xl">
+                            </div>
+                        </div>
+                    </div>
+                    <div data-aos="fade-left">
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold tracking-[0.2em] bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">01</span>
+                            <h3 class="font-display text-3xl">多语言支持</h3>
+                        </div>
+                        <p class="text-lg text-muted leading-relaxed">
+                            内置中文与英文语言包，随系统偏好自动切换，也可手动自由选择。
+                        </p>
+                        <div class="mt-6 flex flex-wrap gap-3 text-sm text-muted">
+                            <span class="tag px-3 py-1 rounded-full">系统识别</span>
+                            <span class="tag px-3 py-1 rounded-full">界面一致</span>
+                            <span class="tag px-3 py-1 rounded-full">细节本地化</span>
+                        </div>
                     </div>
                 </div>
-                <div class="lg:w-1/2" data-aos="fade-right">
-                    <div class="flex items-center gap-4 mb-4">
-                        <span class="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                            <i class="fas fa-volume-up text-xl"></i>
-                        </span>
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">自定义提示音</h3>
+
+                <div class="grid lg:grid-cols-[1.05fr,0.95fr] gap-12 items-center">
+                    <div class="order-2 lg:order-1" data-aos="fade-right">
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold tracking-[0.2em] bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200">02</span>
+                            <h3 class="font-display text-3xl">自定义提示音</h3>
+                        </div>
+                        <p class="text-lg text-muted leading-relaxed">
+                            多种提示音自由切换，提醒既清晰又克制。也支持自定义音效与音量，专注不被打断。
+                        </p>
+                        <div class="mt-6 flex flex-wrap gap-3 text-sm text-muted">
+                            <span class="tag px-3 py-1 rounded-full">多种预设</span>
+                            <span class="tag px-3 py-1 rounded-full">一键试听</span>
+                            <span class="tag px-3 py-1 rounded-full">音量控制</span>
+                        </div>
                     </div>
-                    <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-                        提供多种预设报警音效，支持自定义设置，让每一次计时结束都以您喜欢的方式提醒。
-                    </p>
+                    <div class="order-1 lg:order-2" data-aos="fade-left">
+                        <div class="feature-frame">
+                            <div class="feature-inner p-3">
+                                <img src="https://s2.loli.net/2026/01/23/zP9sMjAvWZCbtfu.png" alt="Settings Page" class="w-full rounded-2xl">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid lg:grid-cols-[0.95fr,1.05fr] gap-12 items-center">
+                    <div data-aos="fade-right">
+                        <div class="feature-frame">
+                            <div class="feature-inner p-3">
+                                <img src="https://s2.loli.net/2026/01/23/nl3g6x1GaefWwRX.png" alt="Quick Start" class="w-full rounded-2xl">
+                            </div>
+                        </div>
+                    </div>
+                    <div data-aos="fade-left">
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold tracking-[0.2em] bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">03</span>
+                            <h3 class="font-display text-3xl">快捷上手</h3>
+                        </div>
+                        <p class="text-lg text-muted leading-relaxed">
+                            界面极简、流程清晰，启动即用。让你的注意力只停留在真正重要的事情上。
+                        </p>
+                        <div class="mt-6 flex flex-wrap gap-3 text-sm text-muted">
+                            <span class="tag px-3 py-1 rounded-full">零学习成本</span>
+                            <span class="tag px-3 py-1 rounded-full">清爽无干扰</span>
+                            <span class="tag px-3 py-1 rounded-full">动作反馈</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Feature 3 -->
-            <div class="flex flex-col lg:flex-row items-center gap-16">
-                <div class="lg:w-1/2" data-aos="fade-right">
-                    <div class="relative rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-64 flex items-center justify-center">
-                        <i class="fas fa-desktop text-6xl text-green-500"></i>
-                    </div>
-                </div>
-                <div class="lg:w-1/2" data-aos="fade-left">
-                    <div class="flex items-center gap-4 mb-4">
-                        <span class="p-3 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                            <i class="fas fa-check-circle text-xl"></i>
-                        </span>
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">简单易用</h3>
-                    </div>
-                    <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-                        极简的用户界面设计，专注于计时功能本身，无多余干扰，让您快速上手，即刻专注。
-                    </p>
-                </div>
-            </div>
-
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-                <div class="col-span-1 md:col-span-2">
-                    <div class="flex items-center gap-3 mb-6">
-                        <img src="logo.svg" alt="Logo" class="h-8 w-auto">
-                        <span class="font-bold text-xl">Desktop Timer</span>
+    <footer class="pt-16 pb-10">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="card rounded-3xl p-8 md:p-12">
+                <div class="grid md:grid-cols-[1.2fr,0.8fr] gap-10 items-center">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <img src="logo.svg" alt="Logo" class="h-9 w-auto">
+                            <span class="font-display text-2xl">Desktop Timer</span>
+                        </div>
+                        <p class="text-muted text-base max-w-lg">
+                            Desktop Timer 是一个开源的桌面计时器项目，专注于打造轻量、稳定、优雅的专注节奏。
+                        </p>
                     </div>
-                    <p class="text-gray-500 dark:text-gray-400 max-w-md">
-                        Desktop Timer 是一个开源的桌面计时器项目，旨在提供简单、高效的时间管理体验。
-                    </p>
-                </div>
-                
-                <div>
-                    <h4 class="font-bold text-gray-900 dark:text-white mb-6">链接</h4>
-                    <ul class="space-y-4">
-                        <li><a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">GitHub 仓库</a></li>
-                        <li><a href="https://github.com/RE-TikaRa/DesktopTimer/issues" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">问题反馈</a></li>
-                    </ul>
+                    <div class="space-y-4">
+                        <h4 class="font-display text-xl">链接</h4>
+                        <div class="grid gap-3 text-sm text-muted">
+                            <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="hover:text-ink transition-colors">GitHub 仓库</a>
+                            <a href="https://github.com/RE-TikaRa/DesktopTimer/issues" target="_blank" class="hover:text-ink transition-colors">问题反馈</a>
+                            <a href="#home" class="hover:text-ink transition-colors">回到顶部</a>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="btn-ghost inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold">
+                                <i class="fab fa-github"></i>
+                                查看源码
+                            </a>
+                            <a href="https://github.com/RE-TikaRa/DesktopTimer/releases/latest" target="_blank" class="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold">
+                                <i class="fas fa-download"></i>
+                                立即下载
+                            </a>
+                            <a href="https://re-tikara.fun/Blog/posts/998ef9dc/" target="_blank" class="btn-ghost inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold">
+                                <i class="fas fa-book"></i>
+                                查看文档
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="border-t border-gray-200 dark:border-gray-800 pt-8 text-center">
-                <p class="text-gray-500 dark:text-gray-500 text-sm">
-                    &copy; 2024 Desktop Timer. All rights reserved.
-                </p>
+            <div class="mt-8 text-center text-xs text-muted">
+                &copy; 2024 Desktop Timer. All rights reserved. License: GNU GPL v3.
             </div>
         </div>
     </footer>
