@@ -183,7 +183,7 @@
     "about_homepage_value": "GitHub 仓库",
     "about_bilibili": "B站主页",
     "about_license": "许可证",
-    "about_license_value": "DNCL-1.0 非商用许可",
+    "about_license_value": "GNU GPL v3 或更高版本",
     "about_description": "DesktopTimer 是一个简洁的桌面计时器，提供正计时、倒计时和时钟模式，并支持丰富的个性化设置。",
     "about_thanks": "感谢使用 DesktopTimer！",
     "enter_fullscreen": "进入全屏",

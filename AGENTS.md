@@ -4,7 +4,7 @@
 - **DesktopTimer 2.0.0**：PyQt6 桌面计时器（设置页基于 PyQt6-Fluent-Widgets），入口 `main.py → module.app.main() → TimerWindow`。
 - 支持 Windows 10/11 & Python 3.13，提供正计时/倒计时/时钟模式、托盘常驻、快捷键、自定义外观与多语言（`lang/zh_CN.json`、`lang/en_US.json`）。
 - 运行态配置写入 `settings/timer_settings.json`，加载时会与 `DEFAULT_SHORTCUTS`、`DEFAULT_COUNTDOWN_PRESETS` 等默认值合并并做合法性校验。
-- 许可证：DesktopTimer Non-Commercial License 1.0（DNCL-1.0），商用需作者授权。
+- 许可证：GPL-3.0-or-later。
 
 ## 目录速查
 ```
@@ -73,7 +73,7 @@ DesktopTimer/
 - 替换 win10toast 或移除其 `pkg_resources` 依赖，确保未来 Python/Setuptools 版本兼容
 
 ## 维护提醒
-- 优先中文描述，commit/PR 均请遵守 DNCL-1.0。
+- 优先中文描述，commit/PR 均请遵守 GPL-3.0-or-later。
 - 当前环境：Windows 11 Pro 24H2，Python 3.13.3，具备完整网络与 GPU 能力，但项目主要依赖 PyQt6。
 - 打包方式：onefile + 外置资源目录（`DesktopTimer.spec` 未内置数据文件）。
 - 禁止擅自还原用户已有改动；操作前可 `git status` 快速确认工作区状态。

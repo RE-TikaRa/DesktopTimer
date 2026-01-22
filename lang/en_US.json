@@ -183,7 +183,7 @@
     "about_homepage_value": "GitHub repository",
     "about_bilibili": "Bilibili",
     "about_license": "License",
-    "about_license_value": "DNCL-1.0 Non-Commercial License",
+    "about_license_value": "GNU GPL v3 or later",
     "about_description": "DesktopTimer is a lightweight desktop timer that offers count up, countdown, and clock modes with rich customization options.",
     "about_thanks": "Thanks for using DesktopTimer!",
     "enter_fullscreen": "Enter Fullscreen",
