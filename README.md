@@ -26,7 +26,7 @@
 <h3 align="center">DesktopTimer | 桌面计时器</h3>
 
 <p align="center">
-基于 PyQt5 的轻量级桌面计时器，支持正计时/倒计时/时钟模式，系统托盘、快捷键、音效与闪烁提醒、多语言（中/英）以及丰富的外观自定义。
+基于 PyQt6 的轻量级桌面计时器，支持正计时/倒计时/时钟模式，系统托盘、快捷键、音效与闪烁提醒、多语言（中/英）以及丰富的外观自定义。
 </p>
 
 <p align="center">
@@ -60,10 +60,10 @@
 ## ✨ 功能一览
 
 - ⏰ 三种计时：正计时、倒计时、时钟（12/24 小时制、可选“秒/日期”）
-- 🔔 提醒方式：自定义音效、系统 Beep、窗口闪烁、托盘气泡、Windows 通知
+- 🔔 提醒方式：自定义音效（可调音量）、系统 Beep、窗口闪烁、托盘气泡、Windows 通知（可开关）
 - 🌐 双语言：中文 / English 一键切换
 - 🎯 预设管理：设置页支持自定义/排序倒计时预设，可为中/英文界面分别命名并同步托盘快捷菜单
-- 🎨 外观：字体/字号、颜色、圆角、透明度、夜读模式、窗口尺寸
+- 🎨 外观：字体/字号、颜色、圆角、透明度、夜读模式、窗口尺寸、主题（浅/深/跟随系统）与主题色
 - 🧰 系统托盘：暂停/继续、重置、模式切换、倒计时预设（含自定义单次输入）、显示/隐藏、锁定/解锁、打开设置、退出
 - 🔒 窗口锁定：固定位置并可启用“点击穿透”
 - ⌨️ 快捷键：常用操作一键直达
@@ -97,9 +97,10 @@
 ## 🛠️ 开发者指南
 
 ### 开发环境要求
-- Python 3.13 或更高版本
+- Python 3.13（暂不支持 3.14）
 - Windows 10/11
-- 建议使用虚拟环境（venv/conda）
+- 依赖管理：UV（已迁移）
+> 注：如需 Qt Designer 等工具，可另行安装 `pyqt6-tools`（与项目运行依赖无关）。
 
 ### 源码运行
 ```pwsh
@@ -108,10 +109,10 @@ git clone https://github.com/RE-TikaRa/DesktopTimer.git
 cd DesktopTimer
 
 # 安装依赖
-pip install -r requirements.txt
+uv sync
 
 # 运行
-python main.py
+uv run python main.py
 
 # 如需调试日志，可在运行前设置环境变量
 # PowerShell
@@ -122,7 +123,9 @@ set DESKTOPTIMER_DEBUG=1
 
 ### 打包为可执行文件
 ```pwsh
-python -m PyInstaller DesktopTimer.spec --noconfirm
+# 打包需要安装开发依赖
+uv sync --dev
+uv run python -m PyInstaller DesktopTimer.spec --noconfirm
 ```
 打包完成后生成 `dist/DesktopTimer.exe`。请将 `img/`、`lang/`、`sounds/` 一并放入 `dist/` 目录。
 
@@ -139,7 +142,9 @@ DesktopTimer/
 │   ├── settings_dialog.py
 │   └── timer_window.py
 ├── DesktopTimer.spec          # PyInstaller 配置
-├── requirements.txt           # Python 依赖
+├── pyproject.toml             # UV 项目配置
+├── uv.lock                    # UV 锁文件
+├── requirements.txt           # Python 依赖（历史/兼容）
 ├── README.md                  # 项目说明
 ├── /img/                      # 图标资源
 │   ├── timer_icon.ico
@@ -185,7 +190,8 @@ DesktopTimer/
    - 使用快捷键 Ctrl+L 解锁，或通过系统托盘菜单解锁。
 
 4. 源码运行报依赖错误？
-   - 重新执行 `pip install -r requirements.txt`，确保网络正常；如仍失败，建议新建虚拟环境后再安装。
+   - 重新执行 `uv sync`，确保网络正常。
+   - 若提示 Python 版本不匹配，请确认项目使用 Python 3.13。
 
 5. 打包后资源路径异常？
    - 本项目已兼容 `sys.frozen` 场景；若自定义了运行目录，请保持资源与可执行文件同级。
@@ -232,7 +238,8 @@ DesktopTimer/
 ---
 
 ## 🧩 使用到的技术栈
-- PyQt5 - GUI 框架
+- PyQt6 - GUI 框架
+- PyQt6-Fluent-Widgets - Fluent 风格组件库（设置页 UI）
 - PyInstaller - 打包工具
 - win10toast - Windows 通知（可选）
 - Inno Setup - 安装程序制作
@@ -319,7 +326,7 @@ DesktopTimer/
 ---
 
 ## 🙏 鸣谢
-- PyQt5 - 提供强大的 GUI 框架
+- PyQt6 - 提供强大的 GUI 框架
 - PyInstaller - Python 打包为可执行文件
 - Qt - 跨平台 GUI 框架
 - Inno Setup - Windows 安装程序制作工具

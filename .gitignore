@@ -8,6 +8,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
+.ruff_cache/
 *.log
 
 # Virtual envs

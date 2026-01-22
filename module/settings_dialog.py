@@ -2,37 +2,45 @@ import logging
 import os
 import random
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont, QIcon, QKeySequence
-from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QFontDatabase, QIcon, QKeySequence
+from PyQt6.QtWidgets import (
     QApplication,
-    QCheckBox,
-    QComboBox,
-    QColorDialog,
+    QAbstractItemView,
     QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
-    QGridLayout,
-    QGroupBox,
     QHBoxLayout,
-    QLabel,
-    QMessageBox,
-    QPushButton,
-    QScrollArea,
-    QSlider,
-    QSpinBox,
-    QTabWidget,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
     QKeySequenceEdit,
-    QFontDialog,
-    QListWidget,
     QListWidgetItem,
-    QLineEdit,
+)
+from qfluentwidgets import (
+    BodyLabel as QLabel,
+    CheckBox as QCheckBox,
+    ColorDialog,
+    ComboBox as QComboBox,
+    CardWidget,
+    Dialog,
+    FluentIcon,
+    IconWidget,
+    LineEdit as QLineEdit,
+    ListWidget as QListWidget,
+    MessageBox,
+    Pivot,
+    PushSettingCard,
+    PrimaryPushButton,
+    PushButton as QPushButton,
+    ScrollArea as QScrollArea,
+    Slider as QSlider,
+    SpinBox as QSpinBox,
+    SettingCard,
+    SettingCardGroup,
+    SwitchSettingCard,
 )
 
 from .constants import (
@@ -41,10 +49,10 @@ from .constants import (
     DEFAULT_SHORTCUTS,
     PROJECT_URL,
 )
-
-logger = logging.getLogger(__name__)
 from .localization import LANGUAGES
 from .paths import get_base_path
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .timer_window import TimerWindow
@@ -54,10 +62,12 @@ class SettingsDialog(QDialog):
     """设置对话框"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.parent_window = parent  # type: TimerWindow
+        self.parent_window = cast("TimerWindow", parent)
         self._current_lang_code = self.parent_window.settings.get("language", "zh_CN")
+        self._initial_lang_code = self._current_lang_code
         self._other_lang_code = self._find_other_language(self._current_lang_code)
         self._preset_data = self._load_preset_snapshot()
+        self._applied_once = False
         self.setWindowTitle(self.tr('settings_title'))
         
         # 设置窗口图标
@@ -68,186 +78,18 @@ class SettingsDialog(QDialog):
             self.setWindowIcon(QIcon(icon_path))
         
         # 隐藏帮助按钮
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         
         self.setMinimumSize(800, 600)  # 允许用户缩小窗口
         self.resize(850, 800)  # 设置默认大小
-        self.apply_stylesheet()
         self.init_ui()
         
-    def apply_stylesheet(self):
-        """应用美化样式"""
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f7;
-                font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
-            }
-
-            QTabWidget::pane {
-                border: 1px solid #e0e0e0;
-                background: white;
-                border-radius: 8px;
-                margin-top: -1px;
-            }
-
-            QTabWidget::tab-bar {
-                left: 10px;
-            }
-
-            QTabBar::tab {
-                background: #e0e0e0;
-                color: #555;
-                padding: 8px 20px;
-                margin-right: 4px;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                border: 1px solid #ccc;
-                border-bottom: none;
-                min-width: 80px;
-            }
-
-            QTabBar::tab:selected {
-                background: white;
-                color: #333;
-                border-bottom: 1px solid white;
-                font-weight: bold;
-            }
-
-            QTabBar::tab:hover {
-                background: #eaeaea;
-            }
-
-            QGroupBox {
-                background-color: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                margin-top: 1.2em;
-                padding-top: 15px;
-                font-weight: bold;
-                color: #333;
-            }
-
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                padding: 0 5px;
-                left: 10px;
-                color: #555;
-            }
-
-            QPushButton {
-                background-color: #007aff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: 500;
-                min-width: 80px;
-            }
-
-            QPushButton:hover {
-                background-color: #0062cc;
-            }
-
-            QPushButton:pressed {
-                background-color: #0051a8;
-            }
-            
-            /* 针对特定按钮的样式覆盖，如果需要的话，可以通过 objectName */
-
-            QLineEdit, QSpinBox, QComboBox, QKeySequenceEdit {
-                border: 1px solid #d1d1d6;
-                border-radius: 6px;
-                padding: 6px 8px;
-                background: white;
-                selection-background-color: #007aff;
-                min-height: 20px;
-            }
-
-            QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QKeySequenceEdit:focus {
-                border: 1px solid #007aff;
-            }
-
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 25px;
-                border-left-width: 0px;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-            }
-
-            QComboBox::down-arrow {
-                width: 0; 
-                height: 0; 
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 6px solid #666;
-                margin-right: 5px;
-            }
-
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-            
-            QScrollArea > QWidget > QWidget {
-                background: transparent;
-            }
-
-            QScrollBar:vertical {
-                border: none;
-                background: #f1f1f1;
-                width: 10px;
-                margin: 0px;
-                border-radius: 5px;
-            }
-
-            QScrollBar::handle:vertical {
-                background: #c1c1c1;
-                min-height: 20px;
-                border-radius: 5px;
-            }
-            
-            QScrollBar::handle:vertical:hover {
-                background: #a8a8a8;
-            }
-
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-            
-            QListWidget {
-                border: 1px solid #d1d1d6;
-                border-radius: 6px;
-                background: white;
-                outline: none;
-            }
-
-            QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #f0f0f0;
-            }
-
-            QListWidget::item:selected {
-                background-color: #e3f2fd;
-                color: #333;
-                border-radius: 4px;
-            }
-
-            QListWidget::item:hover {
-                background-color: #f5f5f7;
-            }
-            
-            QLabel {
-                color: #333;
-            }
-        """)
-
-    def tr(self, key):
+    def tr(self, sourceText: str, disambiguation: str | None = None, n: int = -1) -> str:  # type: ignore[override]
         """翻译助手"""
+        _ = disambiguation
+        _ = n
         lang = self.parent_window.settings.get("language", "zh_CN")
-        return LANGUAGES.get(lang, LANGUAGES['zh_CN']).get(key, key)
+        return LANGUAGES.get(lang, LANGUAGES['zh_CN']).get(sourceText, sourceText)
 
     def _base_path(self) -> str:
         if self.parent_window and getattr(self.parent_window, 'base_path', None):
@@ -294,6 +136,42 @@ class SettingsDialog(QDialog):
                         cleaned[lang_code] = stripped
         return cleaned
 
+    def _confirm(self, title: str, content: str) -> bool:
+        dialog = Dialog(title, content, self)
+        return bool(dialog.exec())
+
+    def _notify(self, title: str, content: str) -> None:
+        MessageBox(title, content, self).exec()
+
+    def _pick_color(self, title: str, initial_hex: str) -> QColor | None:
+        initial = QColor(initial_hex)
+        color_holder = {"color": initial}
+        dialog = ColorDialog(initial, title, self, enableAlpha=False)
+        dialog.colorChanged.connect(lambda c: color_holder.__setitem__("color", c))
+        if dialog.exec():
+            return color_holder["color"]
+        return None
+
+    def _create_card(self, title: str) -> tuple[CardWidget, QVBoxLayout]:
+        card = CardWidget()
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(12)
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 14px; font-weight: 600;")
+        layout.addWidget(title_label)
+        return card, layout
+
+    def _apply_switch_status(self, card, desc: str | None = None) -> None:
+        def _update(checked: bool) -> None:
+            status = self.tr('status_on') if checked else self.tr('status_off')
+            if desc:
+                card.setContent(f"{desc} · {status}")
+            else:
+                card.setContent(status)
+        _update(card.isChecked())
+        card.checkedChanged.connect(lambda checked: _update(checked))
+
     def _apply_label_result(self, entry, data):
         labels = self._clean_labels(data.get('labels'))
         if labels:
@@ -317,58 +195,51 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        # 创建选项卡
-        tabs = QTabWidget()
+        # 创建导航与内容容器
+        self.pivot = Pivot(self)
+        self.stacked_widget = QStackedWidget(self)
         
         # 外观设置选项卡
         appearance_tab = self.create_appearance_tab()
-        tabs.addTab(appearance_tab, self.tr('appearance'))
+        self._add_tab(appearance_tab, "appearance", self.tr('appearance'))
         
         # 计时模式选项卡
         mode_tab = self.create_mode_tab()
-        tabs.addTab(mode_tab, self.tr('timer_mode'))
+        self._add_tab(mode_tab, "timer_mode", self.tr('timer_mode'))
         
         # 预设选项卡
         preset_tab = self.create_preset_tab()
-        tabs.addTab(preset_tab, self.tr('presets'))
+        self._add_tab(preset_tab, "presets", self.tr('presets'))
         
         # 通用设置选项卡
         general_tab = self.create_general_tab()
-        tabs.addTab(general_tab, self.tr('general'))
+        self._add_tab(general_tab, "general", self.tr('general'))
         
         # 关于选项卡
         about_tab = self.create_about_tab()
-        tabs.addTab(about_tab, self.tr('about'))
-        
-        layout.addWidget(tabs)
+        self._add_tab(about_tab, "about", self.tr('about'))
+
+        self.stacked_widget.setCurrentWidget(appearance_tab)
+        self.pivot.setCurrentItem("appearance")
+        self.stacked_widget.currentChanged.connect(self._sync_pivot)
+
+        layout.addWidget(self.pivot, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.stacked_widget, 1)
         
         # 按钮区域
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
         apply_btn = QPushButton(self.tr('apply'))
-        apply_btn.setCursor(Qt.PointingHandCursor)
+        apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         apply_btn.clicked.connect(self.apply_settings)
         
-        ok_btn = QPushButton(self.tr('ok'))
-        ok_btn.setCursor(Qt.PointingHandCursor)
+        ok_btn = PrimaryPushButton(self.tr('ok'))
+        ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         ok_btn.clicked.connect(self.accept_settings)
         
         cancel_btn = QPushButton(self.tr('cancel'))
-        cancel_btn.setCursor(Qt.PointingHandCursor)
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #e5e5ea;
-                color: #333;
-                border: 1px solid #d1d1d6;
-            }
-            QPushButton:hover {
-                background-color: #d1d1d6;
-            }
-            QPushButton:pressed {
-                background-color: #c7c7cc;
-            }
-        """)
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         
         button_layout.addStretch()
@@ -378,6 +249,20 @@ class SettingsDialog(QDialog):
         
         layout.addLayout(button_layout)
         self.setLayout(layout)
+
+    def _add_tab(self, widget: QWidget, route_key: str, title: str) -> None:
+        widget.setObjectName(route_key)
+        self.stacked_widget.addWidget(widget)
+        self.pivot.addItem(
+            routeKey=route_key,
+            text=title,
+            onClick=lambda: self.stacked_widget.setCurrentWidget(widget),
+        )
+
+    def _sync_pivot(self, index: int) -> None:
+        widget = self.stacked_widget.widget(index)
+        if widget is not None:
+            self.pivot.setCurrentItem(widget.objectName())
     
     def create_about_tab(self):
         """创建关于选项卡"""
@@ -387,157 +272,105 @@ class SettingsDialog(QDialog):
         
         widget = QWidget()
         layout = QVBoxLayout()
-        
-        # 主容器
-        about_container = QWidget()
-        about_layout = QVBoxLayout()
-        about_container.setStyleSheet("""
-            QWidget {
-                background-color: #f8f9fa;
-                border-radius: 10px;
-                padding: 20px;
-            }
-        """)
-        
-        # ALP STUDIO LOGO
-        # 获取 exe 所在目录（打包后）或脚本所在目录（开发时）
+        layout.setSpacing(16)
+
+        header_card = CardWidget()
+        header_layout = QVBoxLayout(header_card)
+        header_layout.setContentsMargins(24, 20, 24, 20)
+        header_layout.setSpacing(12)
+
         base_path = self._base_path()
         logo_path = os.path.join(base_path, "img", "ALP_STUDIO-logo-full.svg")
         if os.path.exists(logo_path):
-            logo_widget = QSvgWidget(logo_path)
-            # 设置更大的尺寸，保持logo原始比例
-            logo_widget.setFixedSize(340, 200)  # 按用户要求设置尺寸
-            logo_widget.setStyleSheet("background: transparent;")
-            
-            # 创建容器来居中logo
+            logo_widget = IconWidget(QIcon(logo_path))
+            logo_widget.setFixedSize(340, 200)
             logo_container = QWidget()
-            logo_container.setStyleSheet("background: transparent;")
             logo_layout = QHBoxLayout(logo_container)
             logo_layout.addStretch()
             logo_layout.addWidget(logo_widget)
             logo_layout.addStretch()
-            logo_layout.setContentsMargins(0, 0, 0, 10)
-            
-            about_layout.addWidget(logo_container)
+            logo_layout.setContentsMargins(0, 0, 0, 6)
+            header_layout.addWidget(logo_container)
         else:
-            # 备用emoji logo
             logo_label = QLabel("🕒")
-            logo_label.setAlignment(Qt.AlignCenter)
-            logo_label.setStyleSheet("""
-                QLabel {
-                    font-size: 48px;
-                    margin-bottom: 10px;
-                    background: transparent;
-                }
-            """)
-            about_layout.addWidget(logo_label)
-        
-        # 应用名称
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            logo_font = logo_label.font()
+            logo_font.setPointSize(40)
+            logo_label.setFont(logo_font)
+            header_layout.addWidget(logo_label)
+
         app_name = QLabel("DesktopTimer")
-        app_name.setAlignment(Qt.AlignCenter)
-        app_name.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2c3e50;
-                margin-bottom: 5px;
-                background: transparent;
-            }
-        """)
-        about_layout.addWidget(app_name)
-        
-        # 副标题
-        subtitle = QLabel(self.tr('app_subtitle') if hasattr(self, 'tr') else "专注工作计时器 | 桌面效率工具")
-        subtitle.setAlignment(Qt.AlignCenter)
-        subtitle.setStyleSheet("""
-            QLabel {
-                font-size: 14px;
-                color: #7f8c8d;
-                margin-bottom: 20px;
-                background: transparent;
-            }
-        """)
-        about_layout.addWidget(subtitle)
-        
-        # 分割线
-        line = QLabel()
-        line.setFixedHeight(1)
-        line.setStyleSheet("background-color: #bdc3c7; margin: 10px 50px;")
-        about_layout.addWidget(line)
-        
-        # 信息区域
-        info_layout = QVBoxLayout()
-        info_layout.setSpacing(8)
-        
+        app_font = app_name.font()
+        app_font.setPointSize(22)
+        app_font.setBold(True)
+        app_name.setFont(app_font)
+        app_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(app_name)
+
+        subtitle = QLabel(self.tr('app_subtitle'))
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setWordWrap(True)
+        subtitle_font = subtitle.font()
+        subtitle_font.setPointSize(11)
+        subtitle.setFont(subtitle_font)
+        header_layout.addWidget(subtitle)
+
+        layout.addWidget(header_card)
+
+        info_group = SettingCardGroup(self.tr('about_basic_info'), widget)
         info_items = [
-            ("版本号", f"{APP_VERSION}", None),
-            ("作  者", "TikaRa", None),
-            ("邮  箱", "163mail@re-TikaRa.fun", "mailto:163mail@re-TikaRa.fun"),
-            ("个人网站", "re-tikara.fun", "https://re-tikara.fun"),
-            ("代码仓库", PROJECT_URL, PROJECT_URL),
-            ("B站主页", "夜雨安歌_TikaRa", "https://space.bilibili.com/374412219")
+            (self.tr('about_version'), f"{APP_VERSION}", None),
+            (self.tr('about_author'), "TikaRa", None),
+            (self.tr('about_email'), "163mail@re-TikaRa.fun", "mailto:163mail@re-TikaRa.fun"),
+            (self.tr('about_website'), "re-tikara.fun", "https://re-tikara.fun"),
+            (self.tr('about_homepage'), self.tr('about_homepage_value'), PROJECT_URL),
+            (self.tr('about_bilibili'), "夜雨安歌_TikaRa", "https://space.bilibili.com/374412219"),
+            (self.tr('about_license'), self.tr('about_license_value'), None),
         ]
-        
+
         for label_text, value_text, link_url in info_items:
-            item_layout = QHBoxLayout()
-            
-            label = QLabel(f"{label_text}:")
-            label.setStyleSheet("""
-                QLabel {
-                    font-weight: bold;
-                    color: #34495e;
-                    background: transparent;
-                }
-            """)
-            label.setMinimumWidth(80)
-            
+            card = SettingCard(
+                FluentIcon.INFO,
+                label_text,
+                None,
+                parent=self,
+            )
             if link_url:
-                value = QLabel(f'<a href="{link_url}" style="color: #3498db; text-decoration: none;">{value_text}</a>')
-                value.setOpenExternalLinks(True)
-                value.setStyleSheet("""
-                    QLabel {
-                        color: #3498db;
-                        background: transparent;
-                    }
-                    QLabel:hover {
-                        text-decoration: underline;
-                    }
-                """)
+                value_label = QLabel(f'<a href="{link_url}">{value_text}</a>')
+                value_label.setOpenExternalLinks(True)
             else:
-                value = QLabel(value_text)
-                value.setStyleSheet("""
-                    QLabel {
-                        color: #2c3e50;
-                        background: transparent;
-                    }
-                """)
-            
-            item_layout.addWidget(label)
-            item_layout.addWidget(value)
-            item_layout.addStretch()
-            
-            info_layout.addLayout(item_layout)
-        
-        about_layout.addLayout(info_layout)
-        
-        # 底部空白
-        about_layout.addStretch()
-        
-        about_container.setLayout(about_layout)
-        layout.addWidget(about_container)
+                value_label = QLabel(value_text)
+            card.hBoxLayout.addWidget(
+                value_label,
+                0,
+                Qt.AlignmentFlag.AlignRight,
+            )
+            card.hBoxLayout.addSpacing(16)
+            info_group.addSettingCard(card)
+
+        layout.addWidget(info_group)
+
+        desc_card = CardWidget()
+        desc_layout = QVBoxLayout(desc_card)
+        desc_layout.setContentsMargins(24, 16, 24, 16)
+        desc_layout.setSpacing(8)
+        desc_label = QLabel(self.tr('about_description'))
+        desc_label.setWordWrap(True)
+        thanks_label = QLabel(self.tr('about_thanks'))
+        thanks_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_layout.addWidget(desc_label)
+        desc_layout.addWidget(thanks_label)
+        layout.addWidget(desc_card)
+
         layout.addStretch()
-        
+
         widget.setLayout(layout)
-        
-        # 设置滚动区域
         scroll.setWidget(widget)
-        
-        # 创建包装器小部件
+
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout()
         wrapper_layout.addWidget(scroll)
         wrapper.setLayout(wrapper_layout)
-        
         return wrapper
         
     def create_appearance_tab(self):
@@ -548,131 +381,245 @@ class SettingsDialog(QDialog):
         
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(16)
         
-        # 字体设置组
-        font_group = QGroupBox(self.tr('font_settings'))
-        font_layout = QVBoxLayout()
-        
-        font_btn_layout = QHBoxLayout()
-        font_label = QLabel(f'{self.tr("current_font")}: {self.parent_window.settings.get("font_family", "Consolas")}, {self.tr("font_size")}: {self.parent_window.settings.get("font_size", 96)}')
-        self.font_label = font_label
-        font_btn = QPushButton(self.tr('choose_font'))
-        font_btn.clicked.connect(self.choose_font)
-        font_btn_layout.addWidget(font_label)
-        font_btn_layout.addWidget(font_btn)
-        font_layout.addLayout(font_btn_layout)
-        
-        font_group.setLayout(font_layout)
+        font_group = SettingCardGroup(self.tr('font_settings'), widget)
+        font_summary = (
+            f"{self.parent_window.settings.get('font_family', 'Consolas')} · "
+            f"{self.parent_window.settings.get('font_size', 96)}px"
+        )
+        self.font_card = PushSettingCard(
+            self.tr('choose_font'),
+            FluentIcon.FONT,
+            self.tr('font'),
+            font_summary,
+            parent=self,
+        )
+        self.font_card.clicked.connect(self.choose_font)
+        font_group.addSettingCard(self.font_card)
         layout.addWidget(font_group)
-        
-        # 颜色设置组
-        color_group = QGroupBox(self.tr('color_settings'))
-        color_layout = QVBoxLayout()
-        
-        # 字体颜色
-        text_color_layout = QHBoxLayout()
-        text_color_label = QLabel(self.tr('text_color') + ':')
+
+        color_group = SettingCardGroup(self.tr('color_settings'), widget)
+        text_color = self.parent_window.settings.get("text_color", "#E0E0E0")
         self.text_color_btn = QPushButton()
         self.text_color_btn.setFixedSize(80, 30)
-        self.update_color_button(self.text_color_btn, self.parent_window.settings.get("text_color", "#E0E0E0"))
+        self.update_color_button(self.text_color_btn, text_color)
         self.text_color_btn.clicked.connect(self.choose_text_color)
-        text_color_layout.addWidget(text_color_label)
-        text_color_layout.addWidget(self.text_color_btn)
-        text_color_layout.addStretch()
-        color_layout.addLayout(text_color_layout)
-        
-        # 背景颜色
-        bg_color_layout = QHBoxLayout()
-        bg_color_label = QLabel(self.tr('bg_color') + ':')
+        self.text_color_card = SettingCard(
+            FluentIcon.FONT,
+            self.tr('text_color'),
+            text_color,
+            parent=self,
+        )
+        self.text_color_card.hBoxLayout.addWidget(
+            self.text_color_btn,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.text_color_card.hBoxLayout.addSpacing(16)
+        color_group.addSettingCard(self.text_color_card)
+
+        bg_color = self.parent_window.settings.get("bg_color", "#1E1E1E")
         self.bg_color_btn = QPushButton()
         self.bg_color_btn.setFixedSize(80, 30)
-        self.update_color_button(self.bg_color_btn, self.parent_window.settings.get("bg_color", "#1E1E1E"))
+        self.update_color_button(self.bg_color_btn, bg_color)
         self.bg_color_btn.clicked.connect(self.choose_bg_color)
-        bg_color_layout.addWidget(bg_color_label)
-        bg_color_layout.addWidget(self.bg_color_btn)
-        bg_color_layout.addStretch()
-        color_layout.addLayout(bg_color_layout)
-        
-        color_group.setLayout(color_layout)
-        layout.addWidget(color_group)
-        
-        # 透明度设置组
-        opacity_group = QGroupBox(self.tr('opacity_settings'))
-        opacity_layout = QVBoxLayout()
-        
-        opacity_slider_layout = QHBoxLayout()
-        opacity_label = QLabel(self.tr('bg_opacity') + ':')
-        self.opacity_slider = QSlider(Qt.Horizontal)
-        self.opacity_slider.setMinimum(0)
-        self.opacity_slider.setMaximum(255)
-        self.opacity_slider.setValue(self.parent_window.settings.get("bg_opacity", 200))
-        self.opacity_value_label = QLabel(f'{self.parent_window.settings.get("bg_opacity", 200)}')
-        self.opacity_slider.valueChanged.connect(
-            lambda v: self.opacity_value_label.setText(f'{v}')
+        self.bg_color_card = SettingCard(
+            FluentIcon.PALETTE,
+            self.tr('bg_color'),
+            bg_color,
+            parent=self,
         )
-        opacity_slider_layout.addWidget(opacity_label)
-        opacity_slider_layout.addWidget(self.opacity_slider)
-        opacity_slider_layout.addWidget(self.opacity_value_label)
-        opacity_layout.addLayout(opacity_slider_layout)
-        
-        opacity_group.setLayout(opacity_layout)
+        self.bg_color_card.hBoxLayout.addWidget(
+            self.bg_color_btn,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.bg_color_card.hBoxLayout.addSpacing(16)
+        color_group.addSettingCard(self.bg_color_card)
+        layout.addWidget(color_group)
+
+        opacity_group = SettingCardGroup(self.tr('opacity_settings'), widget)
+        opacity_value = self.parent_window.settings.get("bg_opacity", 200)
+        self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.opacity_slider.setRange(0, 255)
+        self.opacity_slider.setValue(opacity_value)
+        self.opacity_value_label = QLabel(str(opacity_value))
+        self.opacity_card = SettingCard(
+            FluentIcon.TRANSPARENT,
+            self.tr('bg_opacity'),
+            str(opacity_value),
+            parent=self,
+        )
+        self.opacity_card.hBoxLayout.addWidget(
+            self.opacity_value_label,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.opacity_card.hBoxLayout.addSpacing(6)
+        self.opacity_card.hBoxLayout.addWidget(
+            self.opacity_slider,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.opacity_card.hBoxLayout.addSpacing(16)
+        def _update_opacity(v: int) -> None:
+            self.opacity_value_label.setText(str(v))
+            self.opacity_card.setContent(str(v))
+        self.opacity_slider.valueChanged.connect(_update_opacity)
+        opacity_group.addSettingCard(self.opacity_card)
         layout.addWidget(opacity_group)
-        
-        # 窗口样式设置
-        style_group = QGroupBox(self.tr('window_style'))
-        style_layout = QVBoxLayout()
-        
-        self.rounded_check = QCheckBox(self.tr('rounded_corners'))
-        self.rounded_check.setChecked(self.parent_window.settings.get("rounded_corners", True))
-        style_layout.addWidget(self.rounded_check)
-        
-        radius_layout = QHBoxLayout()
-        radius_label = QLabel(self.tr('corner_radius') + ':')
+
+        style_group = SettingCardGroup(self.tr('window_style'), widget)
+        self.rounded_card = SwitchSettingCard(
+            FluentIcon.LAYOUT,
+            self.tr('rounded_corners'),
+            None,
+            parent=self,
+        )
+        self.rounded_card.setChecked(self.parent_window.settings.get("rounded_corners", True))
+        self._apply_switch_status(self.rounded_card)
+        style_group.addSettingCard(self.rounded_card)
+
+        radius_value = self.parent_window.settings.get("corner_radius", 15)
         self.radius_spin = QSpinBox()
         self.radius_spin.setRange(0, 50)
-        self.radius_spin.setValue(self.parent_window.settings.get("corner_radius", 15))
+        self.radius_spin.setValue(radius_value)
         self.radius_spin.setSuffix(' px')
-        radius_layout.addWidget(radius_label)
-        radius_layout.addWidget(self.radius_spin)
-        radius_layout.addStretch()
-        style_layout.addLayout(radius_layout)
-        
-        # 窗口大小调整
-        # 窗口大小设置 - 使用滑块控制字体大小
-        size_layout = QVBoxLayout()
-        size_label_row = QHBoxLayout()
-        size_label = QLabel(self.tr('window_size') + ':')
-        size_label_row.addWidget(size_label)
-        size_label_row.addStretch()
-        size_layout.addLayout(size_label_row)
+        self.radius_card = SettingCard(
+            FluentIcon.BRUSH,
+            self.tr('corner_radius'),
+            f"{radius_value}px",
+            parent=self,
+        )
+        self.radius_card.hBoxLayout.addWidget(
+            self.radius_spin,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.radius_card.hBoxLayout.addSpacing(16)
+        self.radius_spin.valueChanged.connect(
+            lambda v: self.radius_card.setContent(f"{v}px")
+        )
+        style_group.addSettingCard(self.radius_card)
 
-        slider_row = QHBoxLayout()
-        self.size_slider = QSlider(Qt.Horizontal)
+        current_size = self.parent_window.settings.get("font_size", 96)
+        self.size_slider = QSlider(Qt.Orientation.Horizontal)
         self.size_slider.setRange(48, 220)
         self.size_slider.setSingleStep(2)
-        current_size = self.parent_window.settings.get("font_size", 96)
         self.size_slider.setValue(current_size)
         self.size_value_label = QLabel(f"{current_size}px")
-        self.size_slider.valueChanged.connect(lambda v: self.size_value_label.setText(f"{v}px"))
-        slider_row.addWidget(self.size_slider, 1)
-        slider_row.addWidget(self.size_value_label)
-        size_layout.addLayout(slider_row)
-        style_layout.addLayout(size_layout)
-        
-        style_group.setLayout(style_layout)
+        self.size_card = SettingCard(
+            FluentIcon.FONT_SIZE,
+            self.tr('window_size'),
+            f"{current_size}px",
+            parent=self,
+        )
+        self.size_card.hBoxLayout.addWidget(
+            self.size_value_label,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.size_card.hBoxLayout.addSpacing(6)
+        self.size_card.hBoxLayout.addWidget(
+            self.size_slider,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.size_card.hBoxLayout.addSpacing(16)
+        def _update_size(v: int) -> None:
+            self.size_value_label.setText(f"{v}px")
+            self.size_card.setContent(f"{v}px")
+        self.size_slider.valueChanged.connect(_update_size)
+        style_group.addSettingCard(self.size_card)
         layout.addWidget(style_group)
-        
-        # 夜读模式
-        night_group = QGroupBox(self.tr('night_mode'))
-        night_layout = QVBoxLayout()
-        
-        self.night_mode_check = QCheckBox(self.tr('night_mode_desc'))
-        self.night_mode_check.setChecked(self.parent_window.settings.get("night_mode", False))
-        night_layout.addWidget(self.night_mode_check)
-        
-        night_group.setLayout(night_layout)
+
+        theme_group = SettingCardGroup(self.tr('theme_settings'), widget)
+        self.theme_mode_combo = QComboBox()
+        theme_items = [
+            ('auto', self.tr('theme_auto')),
+            ('light', self.tr('theme_light')),
+            ('dark', self.tr('theme_dark')),
+        ]
+        for key, label in theme_items:
+            self.theme_mode_combo.addItem(label, key)
+        current_theme = self.parent_window.settings.get("theme_mode", "auto")
+        for i in range(self.theme_mode_combo.count()):
+            if self.theme_mode_combo.itemData(i) == current_theme:
+                self.theme_mode_combo.setCurrentIndex(i)
+                break
+        self.theme_mode_card = SettingCard(
+            FluentIcon.PALETTE,
+            self.tr('theme_mode'),
+            None,
+            parent=self,
+        )
+        self.theme_mode_card.hBoxLayout.addWidget(
+            self.theme_mode_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.theme_mode_card.hBoxLayout.addSpacing(16)
+        theme_group.addSettingCard(self.theme_mode_card)
+
+        theme_color = self.parent_window.settings.get("theme_color", "#0078D4")
+        self.theme_color_btn = QPushButton()
+        self.theme_color_btn.setFixedSize(80, 30)
+        self.update_color_button(self.theme_color_btn, theme_color)
+        self.theme_color_btn.clicked.connect(self.choose_theme_color)
+        self.theme_color_card = SettingCard(
+            FluentIcon.PALETTE,
+            self.tr('theme_color'),
+            theme_color,
+            parent=self,
+        )
+        preset_container = QWidget()
+        preset_layout = QHBoxLayout(preset_container)
+        preset_layout.setContentsMargins(0, 0, 0, 0)
+        preset_layout.setSpacing(6)
+        preset_colors = [
+            "#0078D4",
+            "#00B294",
+            "#E81123",
+            "#FFB900",
+            "#8E8CD8",
+            "#2D7D9A",
+        ]
+        for color in preset_colors:
+            btn = QPushButton()
+            btn.setFixedSize(22, 22)
+            btn.setStyleSheet(
+                f"background-color: {color}; border: 1px solid #666; border-radius: 4px;"
+            )
+            btn.clicked.connect(lambda _, c=color: self._set_theme_color(c))
+            preset_layout.addWidget(btn)
+        self.theme_color_card.hBoxLayout.addWidget(
+            preset_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.theme_color_card.hBoxLayout.addSpacing(6)
+        self.theme_color_card.hBoxLayout.addWidget(
+            self.theme_color_btn,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.theme_color_card.hBoxLayout.addSpacing(16)
+        theme_group.addSettingCard(self.theme_color_card)
+        layout.addWidget(theme_group)
+
+        night_group = SettingCardGroup(self.tr('night_mode'), widget)
+        self.night_mode_card = SwitchSettingCard(
+            FluentIcon.BRIGHTNESS,
+            self.tr('night_mode'),
+            None,
+            parent=self,
+        )
+        self.night_mode_card.setChecked(self.parent_window.settings.get("night_mode", False))
+        self._apply_switch_status(self.night_mode_card, self.tr('night_mode_desc'))
+        night_group.addSettingCard(self.night_mode_card)
         layout.addWidget(night_group)
-        
+
         layout.addStretch()
         widget.setLayout(layout)
         
@@ -692,15 +639,13 @@ class SettingsDialog(QDialog):
         widget = QWidget()
         layout = QVBoxLayout()
         
-        mode_group = QGroupBox(self.tr('timer_mode'))
-        mode_layout = QVBoxLayout()
-        
-        # 模式选择
-        mode_select_layout = QHBoxLayout()
-        mode_label = QLabel(self.tr('mode') + ':')
+        mode_group = SettingCardGroup(self.tr('timer_mode'), widget)
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems([self.tr('count_up_mode'), self.tr('countdown_mode'), self.tr('clock_mode')])
-        # 根据语言无关的键设置选中项，兼容旧存储
+        self.mode_combo.addItems([
+            self.tr('count_up_mode'),
+            self.tr('countdown_mode'),
+            self.tr('clock_mode'),
+        ])
         key = self.parent_window.settings.get('timer_mode_key')
         if not key:
             key = TimerWindow.derive_mode_key(self.parent_window.settings.get('timer_mode', ''))
@@ -708,103 +653,146 @@ class SettingsDialog(QDialog):
         index = {'countup': 0, 'countdown': 1, 'clock': 2}.get(key, 1)
         self.mode_combo.setCurrentIndex(index)
         self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
-        mode_select_layout.addWidget(mode_label)
-        mode_select_layout.addWidget(self.mode_combo)
-        mode_select_layout.addStretch()
-        mode_layout.addLayout(mode_select_layout)
+        mode_card = SettingCard(
+            FluentIcon.STOP_WATCH,
+            self.tr('mode'),
+            None,
+            parent=self,
+        )
+        mode_card.hBoxLayout.addWidget(
+            self.mode_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        mode_card.hBoxLayout.addSpacing(16)
+        mode_group.addSettingCard(mode_card)
+        layout.addWidget(mode_group)
         
-        # 倒计时设置
         self.countdown_widget = QWidget()
         countdown_layout = QVBoxLayout()
+        countdown_group = SettingCardGroup(self.tr('countdown_mode'), self.countdown_widget)
         
-        time_layout = QHBoxLayout()
-        time_layout.addWidget(QLabel(self.tr('countdown_time') + ':'))
-        
+        time_container = QWidget()
+        time_layout = QHBoxLayout(time_container)
+        time_layout.setContentsMargins(0, 0, 0, 0)
+        time_layout.setSpacing(8)
         self.hours_spin = QSpinBox()
         self.hours_spin.setRange(0, 99)
         self.hours_spin.setSuffix(' ' + self.tr('hours'))
         self.hours_spin.setValue(self.parent_window.settings.get("countdown_hours", 0))
-        
         self.minutes_spin = QSpinBox()
         self.minutes_spin.setRange(0, 59)
         self.minutes_spin.setSuffix(' ' + self.tr('minutes'))
         self.minutes_spin.setValue(self.parent_window.settings.get("countdown_minutes", 25))
-        
         self.seconds_spin = QSpinBox()
         self.seconds_spin.setRange(0, 59)
         self.seconds_spin.setSuffix(' ' + self.tr('seconds'))
         self.seconds_spin.setValue(self.parent_window.settings.get("countdown_seconds", 0))
-        
         time_layout.addWidget(self.hours_spin)
         time_layout.addWidget(self.minutes_spin)
         time_layout.addWidget(self.seconds_spin)
-        time_layout.addStretch()
+        time_card = SettingCard(
+            FluentIcon.STOP_WATCH,
+            self.tr('countdown_time'),
+            None,
+            parent=self,
+        )
+        time_card.hBoxLayout.addWidget(
+            time_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        time_card.hBoxLayout.addSpacing(16)
+        countdown_group.addSettingCard(time_card)
         
-        countdown_layout.addLayout(time_layout)
-        
-        # 倒计时完成后的操作
-        action_layout = QHBoxLayout()
-        action_layout.addWidget(QLabel(self.tr('countdown_action') + ':'))
         self.countdown_action = QComboBox()
-        self.countdown_action.addItems([self.tr('beep'), self.tr('flash'), self.tr('beep_flash')])
-        # 匹配现有设置
-        current_action = self.parent_window.settings.get("countdown_action", "beep")
+        action_items = [
+            ('beep', self.tr('beep')),
+            ('flash', self.tr('flash')),
+            ('beep_flash', self.tr('beep_flash')),
+        ]
+        for key, label in action_items:
+            self.countdown_action.addItem(label, key)
+        current_key = self.parent_window.settings.get("countdown_action_key")
+        if current_key not in ('beep', 'flash', 'beep_flash'):
+            current_key = self.parent_window.derive_action_key(
+                self.parent_window.settings.get("countdown_action", "")
+            )
         for i in range(self.countdown_action.count()):
-            if self.countdown_action.itemText(i) in current_action or current_action in self.countdown_action.itemText(i):
+            if self.countdown_action.itemData(i) == current_key:
                 self.countdown_action.setCurrentIndex(i)
                 break
-        action_layout.addWidget(self.countdown_action)
-        action_layout.addStretch()
-        countdown_layout.addLayout(action_layout)
-        
+        action_card = SettingCard(
+            FluentIcon.SPEAKERS,
+            self.tr('countdown_action'),
+            None,
+            parent=self,
+        )
+        action_card.hBoxLayout.addWidget(
+            self.countdown_action,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        action_card.hBoxLayout.addSpacing(16)
+        countdown_group.addSettingCard(action_card)
+        countdown_layout.addWidget(countdown_group)
         self.countdown_widget.setLayout(countdown_layout)
-        mode_layout.addWidget(self.countdown_widget)
+        layout.addWidget(self.countdown_widget)
         
-        # 时钟模式设置
         self.clock_widget = QWidget()
         clock_layout = QVBoxLayout()
+        clock_group = SettingCardGroup(self.tr('clock_mode'), self.clock_widget)
         
-        # 时间格式（24小时制 / 12小时制）
-        format_layout = QHBoxLayout()
-        format_label = QLabel(self.tr('time_format') + ':')
         self.clock_format_combo = QComboBox()
         self.clock_format_combo.addItems([
             self.tr('clock_24h_format'),
             self.tr('clock_12h_format') if 'clock_12h_format' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else ('12小时制' if self.tr('quit') == '退出' else '12-Hour Format'),
         ])
         self.clock_format_combo.setCurrentIndex(0 if self.parent_window.settings.get("clock_format_24h", True) else 1)
-        format_layout.addWidget(format_label)
-        format_layout.addWidget(self.clock_format_combo)
-        format_layout.addStretch()
-        clock_layout.addLayout(format_layout)
+        format_card = SettingCard(
+            FluentIcon.DATE_TIME,
+            self.tr('time_format'),
+            None,
+            parent=self,
+        )
+        format_card.hBoxLayout.addWidget(
+            self.clock_format_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        format_card.hBoxLayout.addSpacing(16)
+        clock_group.addSettingCard(format_card)
         
-        # 显示秒
-        seconds_layout = QHBoxLayout()
-        self.clock_seconds_check = QCheckBox(self.tr('clock_show_seconds'))
-        self.clock_seconds_check.setChecked(self.parent_window.settings.get("clock_show_seconds", True))
-        seconds_layout.addWidget(self.clock_seconds_check)
-        seconds_layout.addStretch()
-        clock_layout.addLayout(seconds_layout)
+        self.clock_seconds_card = SwitchSettingCard(
+            FluentIcon.STOP_WATCH,
+            self.tr('clock_show_seconds'),
+            None,
+            parent=self,
+        )
+        self.clock_seconds_card.setChecked(self.parent_window.settings.get("clock_show_seconds", True))
+        self._apply_switch_status(self.clock_seconds_card)
+        clock_group.addSettingCard(self.clock_seconds_card)
         
-        # 显示日期
-        date_layout = QHBoxLayout()
-        self.clock_date_check = QCheckBox(self.tr('clock_show_date'))
-        self.clock_date_check.setChecked(self.parent_window.settings.get("clock_show_date", True))
-        date_layout.addWidget(self.clock_date_check)
-        date_layout.addStretch()
-        clock_layout.addLayout(date_layout)
+        self.clock_date_card = SwitchSettingCard(
+            FluentIcon.CALENDAR,
+            self.tr('clock_show_date'),
+            None,
+            parent=self,
+        )
+        self.clock_date_card.setChecked(self.parent_window.settings.get("clock_show_date", True))
+        self._apply_switch_status(self.clock_date_card)
+        clock_group.addSettingCard(self.clock_date_card)
 
-        # 12小时制：显示 AM/PM/上午/下午 标签
-        ampm_layout = QHBoxLayout()
-        self.clock_am_pm_check = QCheckBox(self.tr('clock_show_am_pm'))
-        self.clock_am_pm_check.setChecked(self.parent_window.settings.get("clock_show_am_pm", True))
-        ampm_layout.addWidget(self.clock_am_pm_check)
-        ampm_layout.addStretch()
-        clock_layout.addLayout(ampm_layout)
+        self.clock_am_pm_card = SwitchSettingCard(
+            FluentIcon.LANGUAGE,
+            self.tr('clock_show_am_pm'),
+            None,
+            parent=self,
+        )
+        self.clock_am_pm_card.setChecked(self.parent_window.settings.get("clock_show_am_pm", True))
+        self._apply_switch_status(self.clock_am_pm_card)
+        clock_group.addSettingCard(self.clock_am_pm_card)
 
-        # 12小时制：AM/PM 样式选择（en: AM/PM, zh: 上午/下午）
-        style_layout = QHBoxLayout()
-        style_label = QLabel(self.tr('clock_am_pm_style') + ':')
         self.am_pm_style_combo = QComboBox()
         self.am_pm_style_combo.addItems([
             self.tr('am_pm_style_en') or 'AM/PM',
@@ -812,14 +800,20 @@ class SettingsDialog(QDialog):
         ])
         current_style = self.parent_window.settings.get("clock_am_pm_style", "zh")
         self.am_pm_style_combo.setCurrentIndex(0 if current_style == 'en' else 1)
-        style_layout.addWidget(style_label)
-        style_layout.addWidget(self.am_pm_style_combo)
-        style_layout.addStretch()
-        clock_layout.addLayout(style_layout)
+        style_card = SettingCard(
+            FluentIcon.LANGUAGE,
+            self.tr('clock_am_pm_style'),
+            None,
+            parent=self,
+        )
+        style_card.hBoxLayout.addWidget(
+            self.am_pm_style_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        style_card.hBoxLayout.addSpacing(16)
+        clock_group.addSettingCard(style_card)
 
-        # 12小时制：AM/PM 位置（时间前/时间后）
-        pos_layout = QHBoxLayout()
-        pos_label = QLabel(self.tr('clock_am_pm_position') + ':')
         self.am_pm_pos_combo = QComboBox()
         self.am_pm_pos_combo.addItems([
             self.tr('am_pm_pos_before') or 'Before time',
@@ -827,28 +821,33 @@ class SettingsDialog(QDialog):
         ])
         current_pos = self.parent_window.settings.get("clock_am_pm_position", "before")
         self.am_pm_pos_combo.setCurrentIndex(0 if current_pos == 'before' else 1)
-        pos_layout.addWidget(pos_label)
-        pos_layout.addWidget(self.am_pm_pos_combo)
-        pos_layout.addStretch()
-        clock_layout.addLayout(pos_layout)
+        pos_card = SettingCard(
+            FluentIcon.ALIGNMENT,
+            self.tr('clock_am_pm_position'),
+            None,
+            parent=self,
+        )
+        pos_card.hBoxLayout.addWidget(
+            self.am_pm_pos_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        pos_card.hBoxLayout.addSpacing(16)
+        clock_group.addSettingCard(pos_card)
 
-        # 当切换24小时制时，禁用 AM/PM 相关配置
         def _update_ampm_enabled():
             is_24h = (self.clock_format_combo.currentIndex() == 0)
-            self.clock_am_pm_check.setEnabled(not is_24h)
-            # 仅当非24小时制且勾选显示上/下午时可编辑样式和位置
-            enable_detail = (not is_24h) and self.clock_am_pm_check.isChecked()
+            self.clock_am_pm_card.setEnabled(not is_24h)
+            enable_detail = (not is_24h) and self.clock_am_pm_card.isChecked()
             self.am_pm_style_combo.setEnabled(enable_detail)
             self.am_pm_pos_combo.setEnabled(enable_detail)
         self.clock_format_combo.currentIndexChanged.connect(lambda _: _update_ampm_enabled())
-        self.clock_am_pm_check.toggled.connect(lambda _: _update_ampm_enabled())
+        self.clock_am_pm_card.checkedChanged.connect(lambda _: _update_ampm_enabled())
         _update_ampm_enabled()
         
+        clock_layout.addWidget(clock_group)
         self.clock_widget.setLayout(clock_layout)
-        mode_layout.addWidget(self.clock_widget)
-        
-        mode_group.setLayout(mode_layout)
-        layout.addWidget(mode_group)
+        layout.addWidget(self.clock_widget)
         
         # 根据当前模式显示/隐藏倒计时设置
         self.on_mode_changed(self.mode_combo.currentText())
@@ -859,18 +858,22 @@ class SettingsDialog(QDialog):
         
     def create_preset_tab(self):
         """创建预设选项卡"""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(16)
 
-        preset_group = QGroupBox(self.tr('presets'))
-        preset_layout = QVBoxLayout()
+        preset_group, preset_layout = self._create_card(self.tr('presets'))
 
         preset_label = QLabel(self.tr('preset_manage_hint'))
         preset_label.setWordWrap(True)
         preset_layout.addWidget(preset_label)
 
         self.preset_list = QListWidget()
-        self.preset_list.setSelectionMode(QListWidget.SingleSelection)
+        self.preset_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.preset_list.setMinimumHeight(260)
         self.preset_list.itemSelectionChanged.connect(self._update_preset_button_states)
         self.preset_list.itemDoubleClicked.connect(lambda _: self.edit_selected_preset())
         preset_layout.addWidget(self.preset_list)
@@ -908,14 +911,19 @@ class SettingsDialog(QDialog):
         apply_row.addStretch()
         preset_layout.addLayout(apply_row)
 
-        preset_group.setLayout(preset_layout)
         layout.addWidget(preset_group)
         layout.addStretch()
         widget.setLayout(layout)
 
         self._refresh_preset_list()
         self._update_preset_button_states()
-        return widget
+        scroll.setWidget(widget)
+
+        wrapper = QWidget()
+        wrapper_layout = QVBoxLayout()
+        wrapper_layout.addWidget(scroll)
+        wrapper.setLayout(wrapper_layout)
+        return wrapper
 
     def _preview_language_change(self, _index):
         new_lang = "zh_CN" if self.lang_combo.currentText() == "简体中文" else "en_US"
@@ -982,7 +990,7 @@ class SettingsDialog(QDialog):
         self.preset_list.clear()
         for preset in self._preset_data:
             item = QListWidgetItem(self._preset_summary(preset))
-            item.setData(Qt.UserRole, preset.get('id'))
+            item.setData(Qt.ItemDataRole.UserRole, preset.get('id'))
             self.preset_list.addItem(item)
 
     def _get_selected_preset_index(self):
@@ -1015,7 +1023,7 @@ class SettingsDialog(QDialog):
             existing_labels={},
         )
         dialog.setWindowTitle(self.tr('preset_add'))
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_result()
             new_entry = {
                 'id': f"preset_{uuid.uuid4().hex[:8]}",
@@ -1051,7 +1059,7 @@ class SettingsDialog(QDialog):
             existing_labels=existing_labels,
         )
         dialog.setWindowTitle(self.tr('preset_edit'))
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_result()
             preset['hours'] = data['hours']
             preset['minutes'] = data['minutes']
@@ -1067,17 +1075,14 @@ class SettingsDialog(QDialog):
         index = self._get_selected_preset_index()
         if index == -1:
             return
-        reply = QMessageBox.question(
-            self,
+        if not self._confirm(
             self.tr('preset_delete_confirm_title'),
             self.tr('preset_delete_confirm_msg'),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-        if reply == QMessageBox.Yes:
-            self._preset_data.pop(index)
-            self._refresh_preset_list()
-            self._update_preset_button_states()
+        ):
+            return
+        self._preset_data.pop(index)
+        self._refresh_preset_list()
+        self._update_preset_button_states()
 
     def move_selected_preset(self, offset):
         index = self._get_selected_preset_index()
@@ -1094,14 +1099,10 @@ class SettingsDialog(QDialog):
         self.preset_list.setCurrentRow(new_index)
 
     def reset_presets(self):
-        reply = QMessageBox.question(
-            self,
+        if not self._confirm(
             self.tr('preset_reset'),
             self.tr('preset_reset_confirm_msg'),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        ):
             return
         self._preset_data = [dict(preset) for preset in DEFAULT_COUNTDOWN_PRESETS]
         self._refresh_preset_list()
@@ -1116,8 +1117,7 @@ class SettingsDialog(QDialog):
         self.hours_spin.setValue(int(preset.get('hours', 0)))
         self.minutes_spin.setValue(int(preset.get('minutes', 0)))
         self.seconds_spin.setValue(int(preset.get('seconds', 0)))
-        QMessageBox.information(
-            self,
+        self._notify(
             self.tr('preset_applied'),
             self.tr('preset_applied_msg').format(
                 preset.get('hours', 0),
@@ -1134,50 +1134,60 @@ class SettingsDialog(QDialog):
         
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(16)
         
-        # 语言设置
-        lang_group = QGroupBox(self.tr('language'))
-        lang_layout = QVBoxLayout()
-        
-        lang_select_layout = QHBoxLayout()
-        lang_label = QLabel(self.tr('language') + ':')
+        lang_group = SettingCardGroup(self.tr('language'), widget)
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(['简体中文', 'English'])
         current_lang = '简体中文' if self.parent_window.settings.get("language", "zh_CN") == "zh_CN" else 'English'
         self.lang_combo.setCurrentText(current_lang)
         self.lang_combo.currentIndexChanged.connect(self._preview_language_change)
-        lang_select_layout.addWidget(lang_label)
-        lang_select_layout.addWidget(self.lang_combo)
-        lang_select_layout.addStretch()
-        lang_layout.addLayout(lang_select_layout)
-        
-        lang_group.setLayout(lang_layout)
+        lang_card = SettingCard(
+            FluentIcon.LANGUAGE,
+            self.tr('language'),
+            None,
+            parent=self,
+        )
+        lang_card.hBoxLayout.addWidget(
+            self.lang_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        lang_card.hBoxLayout.addSpacing(16)
+        lang_group.addSettingCard(lang_card)
         layout.addWidget(lang_group)
         
-        # 启动设置
-        startup_group = QGroupBox(self.tr('auto_start'))
-        startup_layout = QVBoxLayout()
+        startup_group = SettingCardGroup(self.tr('auto_start'), widget)
+        self.auto_start_card = SwitchSettingCard(
+            FluentIcon.PLAY,
+            self.tr('auto_start_timer'),
+            None,
+            parent=self,
+        )
+        self.auto_start_card.setChecked(self.parent_window.settings.get("auto_start_timer", True))
+        self._apply_switch_status(self.auto_start_card)
+        startup_group.addSettingCard(self.auto_start_card)
         
-        self.auto_start_check = QCheckBox(self.tr('auto_start_timer'))
-        self.auto_start_check.setChecked(self.parent_window.settings.get("auto_start_timer", True))
-        startup_layout.addWidget(self.auto_start_check)
-        
-        # 启动模式行为设置
-        behavior_row = QHBoxLayout()
-        behavior_label = QLabel(self.tr('startup_mode_behavior') + ':')
         self.startup_behavior_combo = QComboBox()
         self.startup_behavior_combo.addItems([
             LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}).get('startup_mode_restore_last', '恢复上次模式' if self.tr('quit') == '退出' else 'Restore last mode'),
             LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}).get('startup_mode_fixed', '固定为指定模式' if self.tr('quit') == '退出' else 'Always use fixed mode'),
         ])
         self.startup_behavior_combo.setCurrentIndex(0 if self.parent_window.settings.get('startup_mode_behavior', 'restore') == 'restore' else 1)
-        behavior_row.addWidget(behavior_label)
-        behavior_row.addWidget(self.startup_behavior_combo)
-        behavior_row.addStretch()
-        startup_layout.addLayout(behavior_row)
+        behavior_card = SettingCard(
+            FluentIcon.UPDATE,
+            self.tr('startup_mode_behavior'),
+            None,
+            parent=self,
+        )
+        behavior_card.hBoxLayout.addWidget(
+            self.startup_behavior_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        behavior_card.hBoxLayout.addSpacing(16)
+        startup_group.addSettingCard(behavior_card)
         
-        fixed_row = QHBoxLayout()
-        fixed_label = QLabel(self.tr('startup_fixed_mode') + ':')
         self.startup_fixed_combo = QComboBox()
         self.startup_fixed_combo.addItems([
             self.tr('count_up_mode'),
@@ -1186,75 +1196,143 @@ class SettingsDialog(QDialog):
         ])
         fixed_map = {'countup': 0, 'countdown': 1, 'clock': 2}
         self.startup_fixed_combo.setCurrentIndex(fixed_map.get(self.parent_window.settings.get('startup_fixed_mode_key', 'countdown'), 1))
-        fixed_row.addWidget(fixed_label)
-        fixed_row.addWidget(self.startup_fixed_combo)
-        fixed_row.addStretch()
-        startup_layout.addLayout(fixed_row)
+        self.startup_fixed_card = SettingCard(
+            FluentIcon.PIN,
+            self.tr('startup_fixed_mode'),
+            None,
+            parent=self,
+        )
+        self.startup_fixed_card.hBoxLayout.addWidget(
+            self.startup_fixed_combo,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.startup_fixed_card.hBoxLayout.addSpacing(16)
+        startup_group.addSettingCard(self.startup_fixed_card)
         
         def _update_fixed_enabled():
-            self.startup_fixed_combo.setEnabled(self.startup_behavior_combo.currentIndex() == 1)
+            enabled = self.startup_behavior_combo.currentIndex() == 1
+            self.startup_fixed_card.setEnabled(enabled)
         self.startup_behavior_combo.currentIndexChanged.connect(lambda _: _update_fixed_enabled())
         _update_fixed_enabled()
         
-        startup_group.setLayout(startup_layout)
         layout.addWidget(startup_group)
         
-        # 声音设置
-        sound_group = QGroupBox(self.tr('sound_settings'))
-        sound_layout = QVBoxLayout()
+        sound_group = SettingCardGroup(self.tr('sound_settings'), widget)
+        self.enable_sound_card = SwitchSettingCard(
+            FluentIcon.SPEAKERS,
+            self.tr('enable_sound'),
+            None,
+            parent=self,
+        )
+        self.enable_sound_card.setChecked(self.parent_window.settings.get("enable_sound", True))
+        self._apply_switch_status(self.enable_sound_card)
+        sound_group.addSettingCard(self.enable_sound_card)
         
-        self.enable_sound_check = QCheckBox(self.tr('enable_sound'))
-        self.enable_sound_check.setChecked(self.parent_window.settings.get("enable_sound", True))
-        sound_layout.addWidget(self.enable_sound_check)
+        self.enable_popup_card = SwitchSettingCard(
+            FluentIcon.MESSAGE,
+            self.tr('enable_popup'),
+            None,
+            parent=self,
+        )
+        self.enable_popup_card.setChecked(self.parent_window.settings.get("enable_popup", True))
+        self._apply_switch_status(self.enable_popup_card)
+        sound_group.addSettingCard(self.enable_popup_card)
+
+        self.enable_toast_card = SwitchSettingCard(
+            FluentIcon.INFO,
+            self.tr('enable_windows_toast'),
+            None,
+            parent=self,
+        )
+        self.enable_toast_card.setChecked(self.parent_window.settings.get("enable_windows_toast", True))
+        self._apply_switch_status(self.enable_toast_card)
+        sound_group.addSettingCard(self.enable_toast_card)
+
+        current_volume = self.parent_window.settings.get("sound_volume", 80)
+        if not isinstance(current_volume, int):
+            try:
+                current_volume = int(current_volume)
+            except (TypeError, ValueError):
+                current_volume = 80
+        current_volume = max(0, min(100, current_volume))
+        self.sound_volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sound_volume_slider.setRange(0, 100)
+        self.sound_volume_slider.setValue(current_volume)
+        self.sound_volume_value_label = QLabel(f"{current_volume}%")
+        self.sound_volume_card = SettingCard(
+            FluentIcon.VOLUME,
+            self.tr('sound_volume'),
+            f"{current_volume}%",
+            parent=self,
+        )
+        self.sound_volume_card.hBoxLayout.addWidget(
+            self.sound_volume_value_label,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.sound_volume_card.hBoxLayout.addSpacing(6)
+        self.sound_volume_card.hBoxLayout.addWidget(
+            self.sound_volume_slider,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        self.sound_volume_card.hBoxLayout.addSpacing(16)
+        self.sound_volume_slider.valueChanged.connect(
+            lambda v: (self.sound_volume_value_label.setText(f"{v}%"), self.sound_volume_card.setContent(f"{v}%"))
+        )
+        sound_group.addSettingCard(self.sound_volume_card)
+
+        def _sync_volume_enabled():
+            enabled = self.enable_sound_card.isChecked()
+            self.sound_volume_slider.setEnabled(enabled)
+            self.sound_volume_value_label.setEnabled(enabled)
+        self.enable_sound_card.checkedChanged.connect(lambda _: _sync_volume_enabled())
+        _sync_volume_enabled()
         
-        self.enable_popup_check = QCheckBox(self.tr('enable_popup'))
-        self.enable_popup_check.setChecked(self.parent_window.settings.get("enable_popup", True))
-        sound_layout.addWidget(self.enable_popup_check)
-        
-        # 铃声选择
-        sound_file_layout = QHBoxLayout()
-        sound_file_label = QLabel(self.tr('sound_file') + ':')
         current_sound = self.parent_window.settings.get("sound_file", "")
-        if current_sound and os.path.exists(current_sound):
-            display_name = os.path.basename(current_sound)
-        else:
-            display_name = self.tr('no_sound_file')
-        self.sound_file_label = QLabel(display_name)
-        self.sound_file_label.setWordWrap(True)
-        self.sound_file_label.setStyleSheet('QLabel { color: #666; }')
-        choose_sound_btn = QPushButton(self.tr('choose_sound'))
-        choose_sound_btn.clicked.connect(self.choose_sound_file)
-        sound_file_layout.addWidget(sound_file_label)
-        sound_file_layout.addWidget(self.sound_file_label, 1)
-        sound_file_layout.addWidget(choose_sound_btn)
-        sound_layout.addLayout(sound_file_layout)
+        display_name = os.path.basename(current_sound) if current_sound and os.path.exists(current_sound) else self.tr('no_sound_file')
+        self.sound_file_card = PushSettingCard(
+            self.tr('choose_sound'),
+            FluentIcon.MUSIC_FOLDER,
+            self.tr('sound_file'),
+            display_name,
+            parent=self,
+        )
+        self.sound_file_card.clicked.connect(self.choose_sound_file)
+        sound_group.addSettingCard(self.sound_file_card)
         
-        # 铃声文件夹和随机按钮
-        folder_layout = QHBoxLayout()
+        action_container = QWidget()
+        action_layout = QHBoxLayout(action_container)
+        action_layout.setContentsMargins(0, 0, 0, 0)
+        action_layout.setSpacing(6)
         folder_btn = QPushButton(self.tr('open_folder'))
         folder_btn.clicked.connect(self.open_sound_folder)
         test_btn = QPushButton(self.tr('test_sound'))
         test_btn.clicked.connect(self.test_sound)
         random_btn = QPushButton('随机' if self.tr('quit') == '退出' else 'Random')
         random_btn.clicked.connect(self.random_sound)
-        folder_layout.addWidget(folder_btn)
-        folder_layout.addWidget(test_btn)
-        folder_layout.addWidget(random_btn)
-        folder_layout.addStretch()
-        sound_layout.addLayout(folder_layout)
-        
-        sound_group.setLayout(sound_layout)
+        action_layout.addWidget(folder_btn)
+        action_layout.addWidget(test_btn)
+        action_layout.addWidget(random_btn)
+        action_card = SettingCard(
+            FluentIcon.MUSIC,
+            self.tr('sound_folder'),
+            None,
+            parent=self,
+        )
+        action_card.hBoxLayout.addWidget(
+            action_container,
+            0,
+            Qt.AlignmentFlag.AlignRight,
+        )
+        action_card.hBoxLayout.addSpacing(16)
+        sound_group.addSettingCard(action_card)
         layout.addWidget(sound_group)
         
-        # 快捷键设置（可编辑）
-        shortcut_group = QGroupBox(self.tr('shortcuts'))
-        shortcut_layout = QVBoxLayout()
-
-        # 读取当前快捷键设置（若不存在，用默认）
+        shortcut_group = SettingCardGroup(self.tr('shortcuts'), widget)
         current_shortcuts = dict(DEFAULT_SHORTCUTS)
         current_shortcuts.update(self.parent_window.settings.get('shortcuts', {}))
-
-        # 准备字段：键 -> (翻译文本, setting_key)
         fields = [
             (self.tr('shortcut_pause') or '暂停/继续', 'pause_resume'),
             (self.tr('shortcut_reset') or '重置', 'reset'),
@@ -1263,26 +1341,36 @@ class SettingsDialog(QDialog):
             (getattr(self, 'tr', lambda k: None)('shortcut_lock') or '锁定/解锁', 'lock_unlock'),
             ((self.tr('shortcut_fullscreen') if 'shortcut_fullscreen' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else ('\u5168\u5c4f' if self.tr('quit') == '\u9000\u51fa' else 'Toggle Fullscreen')), 'toggle_fullscreen'),
         ]
-
         self.shortcut_edits = {}
         for label_text, skey in fields:
-            row = QHBoxLayout()
-            row.addWidget(QLabel(label_text + ':'))
             editor = QKeySequenceEdit()
             try:
                 editor.setKeySequence(QKeySequence(current_shortcuts.get(skey, DEFAULT_SHORTCUTS[skey])))
             except Exception:
                 editor.setKeySequence(QKeySequence(DEFAULT_SHORTCUTS[skey]))
-            row.addWidget(editor, 1)
-            row.addStretch()
-            shortcut_layout.addLayout(row)
+            card = SettingCard(
+                FluentIcon.COMMAND_PROMPT,
+                label_text,
+                None,
+                parent=self,
+            )
+            card.hBoxLayout.addWidget(
+                editor,
+                0,
+                Qt.AlignmentFlag.AlignRight,
+            )
+            card.hBoxLayout.addSpacing(16)
+            shortcut_group.addSettingCard(card)
             self.shortcut_edits[skey] = editor
 
-        hint = QLabel(self.tr('shortcut_edit_hint') if 'shortcut_edit_hint' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else '提示：点击后按下组合键（如 Ctrl+Space）。')
-        hint.setStyleSheet('color:#666;')
-        shortcut_layout.addWidget(hint)
-
-        shortcut_group.setLayout(shortcut_layout)
+        hint_text = self.tr('shortcut_edit_hint') if 'shortcut_edit_hint' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) else '提示：点击后按下组合键（如 Ctrl+Space）。'
+        hint_card = SettingCard(
+            FluentIcon.INFO,
+            self.tr('shortcuts'),
+            hint_text,
+            parent=self,
+        )
+        shortcut_group.addSettingCard(hint_card)
         layout.addWidget(shortcut_group)
 
         layout.addStretch()
@@ -1309,38 +1397,86 @@ class SettingsDialog(QDialog):
         
     def choose_font(self):
         """选择字体"""
-        current_font = QFont(self.parent_window.settings.get("font_family", "Consolas"), 
-                           self.parent_window.settings.get("font_size", 96))
-        
-        # 创建字体对话框并设置中文标题和选项
-        font_dialog = QFontDialog(current_font, self)
-        font_dialog.setWindowTitle("选择字体")  # 直接使用中文标题
-        
-        # 强制使用非原生对话框以便更好地控制界面
-        font_dialog.setOption(QFontDialog.DontUseNativeDialog, True)
-        
-        # 设置对话框的大小和位置
-        font_dialog.resize(640, 480)
-        
-        if font_dialog.exec_() == QFontDialog.Accepted:
-            font = font_dialog.selectedFont()
-            self.parent_window.settings["font_family"] = font.family()
-            self.parent_window.settings["font_size"] = font.pointSize()
-            self.font_label.setText(f'{self.tr("current_font")}: {font.family()}, {self.tr("font_size")}: {font.pointSize()}')
+        current_family = self.parent_window.settings.get("font_family", "Consolas")
+        current_size = self.parent_window.settings.get("font_size", 96)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.tr("choose_font"))
+
+        layout = QVBoxLayout(dialog)
+        form = QFormLayout()
+
+        family_combo = QComboBox()
+        families = QFontDatabase.families()
+        family_combo.addItems(families)
+        if current_family in families:
+            family_combo.setCurrentText(current_family)
+
+        size_spin = QSpinBox()
+        size_spin.setRange(6, 200)
+        size_spin.setValue(current_size)
+
+        form.addRow(QLabel(self.tr("font")), family_combo)
+        form.addRow(QLabel(self.tr("font_size")), size_spin)
+        layout.addLayout(form)
+
+        button_layout = QHBoxLayout()
+        ok_btn = PrimaryPushButton(self.tr("ok"))
+        cancel_btn = QPushButton(self.tr("cancel"))
+        ok_btn.clicked.connect(dialog.accept)
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.parent_window.settings["font_family"] = family_combo.currentText()
+            self.parent_window.settings["font_size"] = size_spin.value()
+            if hasattr(self, "font_card"):
+                self.font_card.setContent(
+                    f"{family_combo.currentText()} · {size_spin.value()}px"
+                )
             
     def choose_text_color(self):
         """选择文字颜色"""
-        color = QColorDialog.getColor(QColor(self.parent_window.settings.get("text_color", "#E0E0E0")), self)
-        if color.isValid():
+        color = self._pick_color(
+            self.tr("text_color"),
+            self.parent_window.settings.get("text_color", "#E0E0E0"),
+        )
+        if color is not None and color.isValid():
             self.parent_window.settings["text_color"] = color.name()
             self.update_color_button(self.text_color_btn, color.name())
+            if hasattr(self, 'text_color_card'):
+                self.text_color_card.setContent(color.name())
             
     def choose_bg_color(self):
         """选择背景颜色"""
-        color = QColorDialog.getColor(QColor(self.parent_window.settings.get("bg_color", "#1E1E1E")), self)
-        if color.isValid():
+        color = self._pick_color(
+            self.tr("bg_color"),
+            self.parent_window.settings.get("bg_color", "#1E1E1E"),
+        )
+        if color is not None and color.isValid():
             self.parent_window.settings["bg_color"] = color.name()
             self.update_color_button(self.bg_color_btn, color.name())
+            if hasattr(self, 'bg_color_card'):
+                self.bg_color_card.setContent(color.name())
+
+    def _set_theme_color(self, hex_color: str) -> None:
+        self.parent_window.settings["theme_color"] = hex_color
+        if hasattr(self, 'theme_color_btn'):
+            self.update_color_button(self.theme_color_btn, hex_color)
+        if hasattr(self, 'theme_color_card'):
+            self.theme_color_card.setContent(hex_color)
+            
+    def choose_theme_color(self):
+        """选择主题色"""
+        color = self._pick_color(
+            self.tr("theme_color"),
+            self.parent_window.settings.get("theme_color", "#0078D4"),
+        )
+        if color is not None and color.isValid():
+            self._set_theme_color(color.name())
             
     def update_color_button(self, button, color):
         """更新颜色按钮的显示"""
@@ -1376,7 +1512,8 @@ class SettingsDialog(QDialog):
                 # 不同盘符，使用绝对路径
                 self.parent_window.settings["sound_file"] = file_path
             
-            self.sound_file_label.setText(os.path.basename(file_path))
+            if hasattr(self, "sound_file_card"):
+                self.sound_file_card.setContent(os.path.basename(file_path))
             
     def open_sound_folder(self):
         """打开铃声文件夹"""
@@ -1386,10 +1523,9 @@ class SettingsDialog(QDialog):
         sound_dir = os.path.join(base_path, 'sounds')
         if not os.path.exists(sound_dir):
             os.makedirs(sound_dir)
-            QMessageBox.information(
-                self,
+            self._notify(
                 self.tr('sound_folder_created'),
-                self.tr('sound_folder_created_msg')
+                self.tr('sound_folder_created_msg'),
             )
         
         # 打开文件夹（跨平台兼容）
@@ -1406,10 +1542,9 @@ class SettingsDialog(QDialog):
                 subprocess.call(["xdg-open", sound_dir])
         except Exception as e:
             logger.warning("Failed to open sound folder: %s", e)
-            QMessageBox.warning(
-                self,
+            self._notify(
                 "错误",
-                f"无法打开文件夹: {sound_dir}\n请手动打开该路径。"
+                f"无法打开文件夹: {sound_dir}\n请手动打开该路径。",
             )
         
     def test_sound(self):
@@ -1440,14 +1575,14 @@ class SettingsDialog(QDialog):
             except ValueError:
                 rel_path = selected_sound
             self.parent_window.settings["sound_file"] = rel_path
-            self.sound_file_label.setText(os.path.basename(selected_sound))
+            if hasattr(self, "sound_file_card"):
+                self.sound_file_card.setContent(os.path.basename(selected_sound))
             # 播放选中的铃声
             self.parent_window.play_sound(selected_sound)
         else:
-            QMessageBox.warning(
-                self,
+            self._notify(
                 self.tr('no_sound_files_found'),
-                self.tr('no_sound_files_msg')
+                self.tr('no_sound_files_msg'),
             )
     
     def _validate_shortcuts(self):
@@ -1483,7 +1618,7 @@ class SettingsDialog(QDialog):
             msg_text = (self.tr('shortcut_conflict_title') if 'shortcut_conflict_title' in LANGUAGES.get(self.parent_window.settings.get('language', 'zh_CN'), {}) 
                        else '快捷键冲突' if self.tr('quit') == '退出' else 'Shortcut Conflict')
             msg_detail = '\n'.join([f"{key}: {old} ⚠ {new}" for new, old, key in conflicts])
-            QMessageBox.warning(self, msg_text, msg_detail)
+            self._notify(msg_text, msg_detail)
             return False
         return True
         
@@ -1518,27 +1653,40 @@ class SettingsDialog(QDialog):
         """应用设置"""
         self.parent_window.settings["countdown_presets"] = self._serialize_presets()
         self.parent_window.settings["bg_opacity"] = self.opacity_slider.value()
-        self.parent_window.settings["night_mode"] = self.night_mode_check.isChecked()
+        self.parent_window.settings["night_mode"] = self.night_mode_card.isChecked()
         self.parent_window.settings["timer_mode"] = self.mode_combo.currentText()
         # 保存语言无关的键
         self.parent_window.settings["timer_mode_key"] = {0: 'countup', 1: 'countdown', 2: 'clock'}.get(self.mode_combo.currentIndex(), 'countdown')
         self.parent_window.settings["countdown_hours"] = self.hours_spin.value()
         self.parent_window.settings["countdown_minutes"] = self.minutes_spin.value()
         self.parent_window.settings["countdown_seconds"] = self.seconds_spin.value()
+        action_key = self.countdown_action.currentData()
+        if action_key not in ('beep', 'flash', 'beep_flash'):
+            action_key = 'beep'
+        self.parent_window.settings["countdown_action_key"] = action_key
         self.parent_window.settings["countdown_action"] = self.countdown_action.currentText()
         # 时间格式：索引0为24小时制，1为12小时制
         self.parent_window.settings["clock_format_24h"] = (self.clock_format_combo.currentIndex() == 0)
-        self.parent_window.settings["clock_show_seconds"] = self.clock_seconds_check.isChecked()
-        self.parent_window.settings["clock_show_date"] = self.clock_date_check.isChecked()
-        self.parent_window.settings["clock_show_am_pm"] = self.clock_am_pm_check.isChecked()
+        self.parent_window.settings["clock_show_seconds"] = self.clock_seconds_card.isChecked()
+        self.parent_window.settings["clock_show_date"] = self.clock_date_card.isChecked()
+        self.parent_window.settings["clock_show_am_pm"] = self.clock_am_pm_card.isChecked()
         self.parent_window.settings["clock_am_pm_style"] = 'en' if self.am_pm_style_combo.currentIndex() == 0 else 'zh'
         self.parent_window.settings["clock_am_pm_position"] = 'before' if self.am_pm_pos_combo.currentIndex() == 0 else 'after'
         self.parent_window.settings["language"] = "zh_CN" if self.lang_combo.currentText() == "简体中文" else "en_US"
-        self.parent_window.settings["auto_start_timer"] = self.auto_start_check.isChecked()
-        self.parent_window.settings["rounded_corners"] = self.rounded_check.isChecked()
+        self.parent_window.settings["auto_start_timer"] = self.auto_start_card.isChecked()
+        self.parent_window.settings["rounded_corners"] = self.rounded_card.isChecked()
         self.parent_window.settings["corner_radius"] = self.radius_spin.value()
-        self.parent_window.settings["enable_sound"] = self.enable_sound_check.isChecked()
-        self.parent_window.settings["enable_popup"] = self.enable_popup_check.isChecked()
+        self.parent_window.settings["enable_sound"] = self.enable_sound_card.isChecked()
+        self.parent_window.settings["enable_popup"] = self.enable_popup_card.isChecked()
+        self.parent_window.settings["sound_volume"] = self.sound_volume_slider.value()
+        self.parent_window.settings["enable_windows_toast"] = self.enable_toast_card.isChecked()
+        theme_mode = self.theme_mode_combo.currentData()
+        if theme_mode not in ("auto", "light", "dark"):
+            theme_mode = "auto"
+        self.parent_window.settings["theme_mode"] = theme_mode
+        self.parent_window.settings["theme_color"] = self.parent_window.settings.get(
+            "theme_color", "#0078D4"
+        )
         
         # 保存启动模式行为
         self.parent_window.settings['startup_mode_behavior'] = 'restore' if self.startup_behavior_combo.currentIndex() == 0 else 'fixed'
@@ -1562,6 +1710,7 @@ class SettingsDialog(QDialog):
         except Exception:
             pass
         self.parent_window.save_settings(immediate=True)  # 用户主动保存，立即执行
+        self._applied_once = True
         
     def accept_settings(self):
         """确定设置（带快捷键冲突检测）"""
@@ -1570,6 +1719,17 @@ class SettingsDialog(QDialog):
             return  # 有冲突，不保存
         self.apply_settings()
         self.accept()
+
+    def reject(self):
+        if not getattr(self, "_applied_once", False):
+            self.parent_window.settings["language"] = self._initial_lang_code
+            self.parent_window.apply_settings(preserve_elapsed=True)
+            self.parent_window.create_tray_menu()
+            try:
+                self.parent_window.reload_shortcuts()
+            except Exception:
+                pass
+        super().reject()
 
 
 class PresetEditorDialog(QDialog):
@@ -1669,10 +1829,15 @@ class PresetEditorDialog(QDialog):
             hint.setStyleSheet('color:#666;')
             layout.addWidget(hint)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        button_layout = QHBoxLayout()
+        ok_btn = PrimaryPushButton(self._tr('ok'))
+        cancel_btn = QPushButton(self._tr('cancel'))
+        ok_btn.clicked.connect(self.accept)
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
 
         self.setLayout(layout)
 
@@ -1684,13 +1849,14 @@ class PresetEditorDialog(QDialog):
             + self.seconds_spin.value()
         )
         if total_seconds <= 0:
-            QMessageBox.warning(self, self._tr('preset_error_title'), self._tr('preset_error_duration'))
+            MessageBox(self._tr('preset_error_title'), self._tr('preset_error_duration'), self).exec()
             return
-        existing_labels = self._initial.get('labels') if isinstance(self._initial.get('labels'), dict) else {}
+        raw_labels = self._initial.get('labels')
+        existing_labels: dict = raw_labels if isinstance(raw_labels, dict) else {}
         existing_primary = existing_labels.get(self._current_lang)
         has_existing_primary = isinstance(existing_primary, str) and existing_primary.strip()
         if not name and not self._allow_auto_name and not has_existing_primary and not self.secondary_toggle.isChecked():
-            QMessageBox.warning(self, self._tr('preset_error_title'), self._tr('preset_error_name'))
+            MessageBox(self._tr('preset_error_title'), self._tr('preset_error_name'), self).exec()
             return
         labels = {}
         if name:
@@ -1698,7 +1864,7 @@ class PresetEditorDialog(QDialog):
         if self.secondary_toggle.isChecked():
             alt_name = self.secondary_edit.text().strip()
             if not alt_name:
-                QMessageBox.warning(self, self._tr('preset_error_title'), self._tr('preset_error_name'))
+                MessageBox(self._tr('preset_error_title'), self._tr('preset_error_name'), self).exec()
                 return
             labels[self._other_lang] = alt_name
         else:
@@ -1725,7 +1891,7 @@ class PresetEditorDialog(QDialog):
                 label_value = next(iter(labels.values()))
         if not labels and not self._allow_auto_name:
             # 没有任何语言的名称
-            QMessageBox.warning(self, self._tr('preset_error_title'), self._tr('preset_error_name'))
+            MessageBox(self._tr('preset_error_title'), self._tr('preset_error_name'), self).exec()
             return
         self._result = {
             'hours': self.hours_spin.value(),

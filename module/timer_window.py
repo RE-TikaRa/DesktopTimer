@@ -4,12 +4,11 @@ import os
 import random
 import uuid
 
-from PyQt5.QtCore import QPoint, Qt, QTimer, QUrl
-from PyQt5.QtGui import QColor, QFont, QIcon, QKeySequence, QIntValidator
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
+from PyQt6.QtGui import QAction, QFont, QIcon, QKeySequence, QIntValidator, QShortcut
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PyQt6.QtWidgets import (
     QApplication,
-    QAction,
     QLabel,
     QMainWindow,
     QMenu,
@@ -18,11 +17,11 @@ from PyQt5.QtWidgets import (
     QDialogButtonBox,
     QHBoxLayout,
     QLineEdit,
-    QShortcut,
     QStyle,
     QSystemTrayIcon,
     QVBoxLayout,
 )
+from qfluentwidgets import FluentStyleSheet, Theme, setTheme, setThemeColor
 
 try:
     from win10toast import ToastNotifier
@@ -32,7 +31,7 @@ except ImportError:
     toaster = None
 
 from .constants import DEFAULT_COUNTDOWN_PRESETS, DEFAULT_SHORTCUTS, TimerConstants
-from .localization import LANGUAGES, L18n
+from .localization import L18n
 from .paths import get_base_path
 from .settings_dialog import SettingsDialog
 
@@ -67,7 +66,9 @@ class CustomCountdownDialog(QDialog):
         self.minutes_edit = self._build_input_row(layout, self._tr('minutes'), default='25')
         self.seconds_edit = self._build_input_row(layout, self._tr('seconds'), default='0')
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -117,6 +118,7 @@ class TimerWindow(QMainWindow):
         self.l18n = L18n(lang_code=self.get_language())
         self._current_language = self.l18n.lang_code
         self.load_settings()
+        self._last_theme_state = None
         # 启动时根据设置决定初始模式
         try:
             behavior = self.settings.get('startup_mode_behavior', 'restore')
@@ -142,7 +144,10 @@ class TimerWindow(QMainWindow):
         self._stored_geometry = None
         self._stored_window_flags = None
         self.last_displayed_text = ""  # 缓存上一次显示的文本，用于优化窗口大小调整
-        self.media_player = QMediaPlayer()
+        self.audio_output = QAudioOutput(self)
+        self.audio_output.setVolume(0.8)
+        self.media_player = QMediaPlayer(self)
+        self.media_player.setAudioOutput(self.audio_output)
         
         # 延迟保存机制
         self._pending_save = False  # 标记是否有待保存的设置
@@ -201,6 +206,26 @@ class TimerWindow(QMainWindow):
         
         # 默认倒计时
         return 'countdown'
+
+    @staticmethod
+    def derive_action_key(action_text):
+        if not isinstance(action_text, str):
+            return 'beep'
+        if action_text in ('beep', 'flash', 'beep_flash'):
+            return action_text
+        text_lower = action_text.lower()
+        has_beep = (
+            'beep' in text_lower
+            or 'sound' in text_lower
+            or '提示音' in action_text
+            or '铃声' in action_text
+        )
+        has_flash = 'flash' in text_lower or '闪烁' in action_text
+        if has_beep and has_flash:
+            return 'beep_flash'
+        if has_flash:
+            return 'flash'
+        return 'beep'
         
     def get_language(self):
         """从设置获取语言代码"""
@@ -212,8 +237,10 @@ class TimerWindow(QMainWindow):
         except Exception:
             return 'zh_CN'
         
-    def tr(self, key):
-        return self.l18n.tr(key)
+    def tr(self, sourceText: str, disambiguation: str | None = None, n: int = -1) -> str:  # type: ignore[override]
+        _ = disambiguation
+        _ = n
+        return self.l18n.tr(sourceText)
     
     def _ensure_language(self):
         desired_lang = self.settings.get('language', 'zh_CN')
@@ -246,9 +273,14 @@ class TimerWindow(QMainWindow):
             "countdown_minutes": 25,
             "countdown_seconds": 0,
             # 倒计时结束动作
-            "countdown_action": "beep",  # 可选: 'beep' | 'sound' | 'flash' | 'notify'
+            "countdown_action": "beep",
+            "countdown_action_key": "beep",  # 可选: 'beep' | 'flash' | 'beep_flash'
             # 音效文件设置
             "sound_file": "sounds/Alarm01.wav",  # 默认音效
+            "sound_volume": 80,
+            "enable_windows_toast": True,
+            "theme_mode": "auto",
+            "theme_color": "#0078D4",
             # 语言设置
             "language": "zh_CN",
             # 时钟模式设置
@@ -293,6 +325,16 @@ class TimerWindow(QMainWindow):
                 if 'timer_mode_key' not in self.settings:
                     self.settings['timer_mode_key'] = self.derive_mode_key(self.settings.get('timer_mode', ''))
                     # 立即保存，确保后续启动稳定
+                    try:
+                        self.save_settings(immediate=True)
+                    except Exception:
+                        pass
+                # 兼容旧版本：倒计时动作键
+                action_key = self.settings.get("countdown_action_key")
+                if action_key not in ('beep', 'flash', 'beep_flash'):
+                    self.settings["countdown_action_key"] = self.derive_action_key(
+                        self.settings.get("countdown_action", "")
+                    )
                     try:
                         self.save_settings(immediate=True)
                     except Exception:
@@ -387,11 +429,40 @@ class TimerWindow(QMainWindow):
                 default_colors = {'text_color': '#E0E0E0', 'bg_color': '#1E1E1E'}
                 self.settings[color_key] = default_colors[color_key]
                 fixed = True
+
+        theme_mode = self.settings.get("theme_mode", "auto")
+        if theme_mode not in ("auto", "light", "dark"):
+            self.settings["theme_mode"] = "auto"
+            fixed = True
+
+        theme_color = self.settings.get("theme_color", "#0078D4")
+        if not isinstance(theme_color, str) or not theme_color.startswith('#') or len(theme_color) != 7:
+            self.settings["theme_color"] = "#0078D4"
+            fixed = True
                 
         # 验证语言设置
         language = self.settings.get("language")
         if language not in ('zh_CN', 'en_US'):
             self.settings["language"] = 'zh_CN'
+            fixed = True
+
+        # 验证倒计时动作键
+        action_key = self.settings.get("countdown_action_key")
+        if action_key not in ('beep', 'flash', 'beep_flash'):
+            self.settings["countdown_action_key"] = self.derive_action_key(
+                self.settings.get("countdown_action", "")
+            )
+            fixed = True
+
+        # 验证音量
+        volume = self.settings.get("sound_volume", 80)
+        if not isinstance(volume, int) or not 0 <= volume <= 100:
+            self.settings["sound_volume"] = 80
+            fixed = True
+
+        # 验证 Windows 通知开关
+        if not isinstance(self.settings.get("enable_windows_toast", True), bool):
+            self.settings["enable_windows_toast"] = True
             fixed = True
             
         # 验证启动模式行为
@@ -557,7 +628,7 @@ class TimerWindow(QMainWindow):
     def prompt_custom_countdown(self):
         """一次性自定义倒计时"""
         dialog = CustomCountdownDialog(self, self.tr)
-        if dialog.exec_() != QDialog.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         parsed = dialog.get_values()
         if not parsed:
@@ -581,6 +652,8 @@ class TimerWindow(QMainWindow):
         """
         if immediate:
             # 立即保存
+            self._pending_save = True
+            self._save_timer.stop()
             self._do_save_settings()
         else:
             # 标记有待保存的设置，并重启定时器
@@ -663,14 +736,12 @@ class TimerWindow(QMainWindow):
         """播放铃声（停止旧音效后播放新音效）"""
         try:
             # 停止当前播放的音效
-            if self.media_player.state() == QMediaPlayer.PlayingState:
+            if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
                 self.media_player.stop()
 
             if os.path.exists(sound_file):
                 url = QUrl.fromLocalFile(sound_file)
-                content = QMediaContent(url)
-                self.media_player.setMedia(content)
-                self.media_player.setVolume(80)  # 设置音量为80%
+                self.media_player.setSource(url)
                 self.media_player.play()
             else:
                 logger.warning("Sound file not found: %s", sound_file)
@@ -684,16 +755,16 @@ class TimerWindow(QMainWindow):
         # 设置窗口属性
         self.setWindowTitle(self.tr('app_name'))
         self.setWindowFlags(
-            Qt.WindowStaysOnTopHint |  # 窗口置顶
-            Qt.FramelessWindowHint |    # 无边框
-            Qt.Tool                      # 工具窗口
+            Qt.WindowType.WindowStaysOnTopHint |  # 窗口置顶
+            Qt.WindowType.FramelessWindowHint |    # 无边框
+            Qt.WindowType.Tool                      # 工具窗口
         )
         self._stored_window_flags = self.windowFlags()
-        self.setAttribute(Qt.WA_TranslucentBackground)  # 透明背景
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # 透明背景
         
         # 创建时间显示标签
         self.time_label = QLabel('00:00:00', self)
-        self.time_label.setAlignment(Qt.AlignCenter)
+        self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # 设置窗口大小和位置
         self.time_label.adjustSize()
@@ -714,11 +785,14 @@ class TimerWindow(QMainWindow):
         self.adjustSize()
         
         # 获取屏幕几何信息
-        screen = QApplication.primaryScreen().geometry()
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return
+        geometry = screen.geometry()
         
         # 计算居中位置
-        x = (screen.width() - self.width()) // 2
-        y = (screen.height() - self.height()) // 2
+        x = (geometry.width() - self.width()) // 2
+        y = (geometry.height() - self.height()) // 2
         
         # 移动窗口到居中位置
         self.move(max(0, x), max(0, y))
@@ -726,9 +800,38 @@ class TimerWindow(QMainWindow):
     def apply_settings(self, preserve_elapsed=False):
         """应用设置"""
         self._ensure_language()
+
+        theme_mode = self.settings.get("theme_mode", "auto")
+        if theme_mode == "light":
+            theme = Theme.LIGHT
+        elif theme_mode == "dark":
+            theme = Theme.DARK
+        else:
+            theme = Theme.AUTO
+        theme_color = self.settings.get("theme_color", "#0078D4")
+        setThemeColor(theme_color, save=False, lazy=True)
+        setTheme(theme, save=False, lazy=True)
+        theme_state = (theme_mode, theme_color)
+        if theme_state != getattr(self, "_last_theme_state", None):
+            self._last_theme_state = theme_state
+            if getattr(self, "tray_icon", None) is not None:
+                self.create_tray_menu()
         # 应用字体
-        font = QFont(self.settings.get("font_family", "Consolas"), self.settings.get("font_size", 96), QFont.Bold)
+        font = QFont(
+            self.settings.get("font_family", "Consolas"),
+            self.settings.get("font_size", 96),
+            QFont.Weight.Bold,
+        )
         self.time_label.setFont(font)
+
+        volume = self.settings.get("sound_volume", 80)
+        if not isinstance(volume, int):
+            try:
+                volume = int(volume)
+            except (TypeError, ValueError):
+                volume = 80
+        volume = max(0, min(100, volume))
+        self.audio_output.setVolume(volume / 100)
         
         # 应用颜色和透明度
         text_color = self.settings["text_color"]
@@ -804,9 +907,10 @@ class TimerWindow(QMainWindow):
         """初始化系统托盘"""
         self.tray_icon = QSystemTrayIcon(self)
         
-        self.tray_icon.setIcon(self.style().standardIcon(
-            self.style().SP_MediaPlay
-        ))
+        style = self.style()
+        if style is None:
+            return
+        self.tray_icon.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         
         # 创建托盘菜单
         self.create_tray_menu()
@@ -819,6 +923,7 @@ class TimerWindow(QMainWindow):
     def build_quick_presets_menu(self):
         """������ͼ��/�Ҽ��˵��еĿ��ٹ���˵�"""
         preset_menu = QMenu(self.tr('mode_switch_menu'), self)
+        self._apply_menu_style(preset_menu)
 
         countup_action = QAction(self.tr('count_up_mode'), self)
         countup_action.triggered.connect(self.switch_to_count_up)
@@ -827,6 +932,7 @@ class TimerWindow(QMainWindow):
         preset_menu.addSeparator()
 
         countdown_menu = QMenu(self.tr('countdown_mode'), self)
+        self._apply_menu_style(countdown_menu)
         countdown_presets = self.settings.get('countdown_presets', [])
         if countdown_presets:
             for preset in countdown_presets:
@@ -861,9 +967,11 @@ class TimerWindow(QMainWindow):
     def create_tray_menu(self):
         """创建托盘菜单"""
         tray_menu = QMenu()
+        self._apply_menu_style(tray_menu)
         
         # 开始/暂停动作
-        self.pause_action = QAction(self.tr('pause'), self)
+        pause_text = self.tr('pause') if self.is_running else self.tr('continue')
+        self.pause_action = QAction(pause_text, self)
         self.pause_action.triggered.connect(self.toggle_pause)
         tray_menu.addAction(self.pause_action)
         
@@ -978,7 +1086,7 @@ class TimerWindow(QMainWindow):
             logger.debug("update_time: mode_key=%s", mode_key)
             self._dbg_printed = True
         if mode_key == 'clock':
-            from PyQt5.QtCore import QDateTime
+            from PyQt6.QtCore import QDateTime
             current_time = QDateTime.currentDateTime()
             
             # 根据设置构建时间格式
@@ -1061,10 +1169,13 @@ class TimerWindow(QMainWindow):
         
     def on_countdown_finished(self):
         """倒计时结束处理"""
-        action = self.settings["countdown_action"]
+        action_key = self.settings.get("countdown_action_key")
+        if action_key not in ('beep', 'flash', 'beep_flash'):
+            action_key = self.derive_action_key(self.settings.get("countdown_action", ""))
+            self.settings["countdown_action_key"] = action_key
         
         # 播放铃声
-        if self.settings.get("enable_sound", True):
+        if self.settings.get("enable_sound", True) and action_key in ("beep", "beep_flash"):
             sound_file = self.settings.get("sound_file", "")
             if sound_file:
                 # 如果是相对路径，转换为绝对路径
@@ -1076,15 +1187,13 @@ class TimerWindow(QMainWindow):
                     self.play_sound(sound_file)
                 else:
                     # 如果文件不存在，播放系统提示音
-                    if self.tr('beep') in action or '提示音' in action:
-                        QApplication.beep()
+                    QApplication.beep()
             else:
                 # 如果没有自定义铃声，播放系统提示音
-                if self.tr('beep') in action or '提示音' in action:
-                    QApplication.beep()
+                QApplication.beep()
         
         # 闪烁提醒
-        if self.tr('flash') in action or '闪烁' in action:
+        if action_key in ("flash", "beep_flash"):
             # 开始闪烁
             self.is_flashing = True
             self.flash_count = 0
@@ -1096,22 +1205,22 @@ class TimerWindow(QMainWindow):
             msg = QMessageBox(self)
             msg.setWindowTitle(self.tr('countdown_finished'))
             msg.setText(self.tr('countdown_finished_msg'))
-            msg.setIcon(QMessageBox.Information)
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.setWindowFlags(msg.windowFlags() | Qt.WindowStaysOnTopHint)
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.setWindowFlags(msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             
             # 确保窗口可见
             if not self.isVisible():
                 self.show()
             
             # 显示弹窗
-            msg.exec_()
+            msg.exec()
         else:
             # 如果不使用弹窗，显示托盘通知
             self.tray_icon.showMessage(
                 self.tr('countdown_finished'),
                 self.tr('countdown_finished_msg'),
-                QSystemTrayIcon.Information,
+                QSystemTrayIcon.MessageIcon.Information,
                 TimerConstants.NOTIFICATION_DURATION_SHORT * 1000
             )
             
@@ -1120,7 +1229,7 @@ class TimerWindow(QMainWindow):
                 self.show()
         
         # Windows原生通知
-        if toaster:
+        if self.settings.get("enable_windows_toast", True) and toaster:
             try:
                 toaster.show_toast(
                     "DesktopTimer",  # 通知标题
@@ -1173,7 +1282,7 @@ class TimerWindow(QMainWindow):
             self.tray_icon.showMessage(
                 self.tr('app_name'),
                 self.tr('timer_continued'),
-                QSystemTrayIcon.Information,
+                QSystemTrayIcon.MessageIcon.Information,
                 TimerConstants.TRAY_MESSAGE_DURATION
             )
         else:
@@ -1181,7 +1290,7 @@ class TimerWindow(QMainWindow):
             self.tray_icon.showMessage(
                 self.tr('app_name'),
                 self.tr('timer_paused'),
-                QSystemTrayIcon.Information,
+                QSystemTrayIcon.MessageIcon.Information,
                 TimerConstants.TRAY_MESSAGE_DURATION
             )
         
@@ -1208,7 +1317,7 @@ class TimerWindow(QMainWindow):
         self.tray_icon.showMessage(
             self.tr('app_name'),
             self.tr('timer_reset'),
-            QSystemTrayIcon.Information,
+            QSystemTrayIcon.MessageIcon.Information,
             TimerConstants.TRAY_MESSAGE_DURATION
         )
         
@@ -1229,14 +1338,14 @@ class TimerWindow(QMainWindow):
         self.tray_icon.showMessage(
             self.tr('countdown_set'),
             f'{hours} {self.tr("hours")} {minutes} {self.tr("minutes")} {seconds} {self.tr("seconds")}',
-            QSystemTrayIcon.Information,
+            QSystemTrayIcon.MessageIcon.Information,
             1000
         )
         
     def show_settings(self):
         """显示设置对话框"""
         dialog = SettingsDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             # 重新创建托盘菜单以更新语言
             self.create_tray_menu()
             
@@ -1268,7 +1377,9 @@ class TimerWindow(QMainWindow):
         except Exception:
             self._stored_geometry = None
         self._stored_window_flags = self.windowFlags()
-        self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(
+            Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint
+        )
         self.showFullScreen()
         self.apply_settings(preserve_elapsed=True)
         self.create_tray_menu()
@@ -1282,10 +1393,12 @@ class TimerWindow(QMainWindow):
         if not self.is_fullscreen:
             return
         self.is_fullscreen = False
-        restore_flags = self._stored_window_flags or (Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
+        restore_flags = self._stored_window_flags or (
+            Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool
+        )
         self.setWindowFlags(restore_flags)
         self.showNormal()
-        if self._stored_geometry:
+        if self._stored_geometry is not None:
             self.setGeometry(self._stored_geometry)
         else:
             self.center_on_screen()
@@ -1298,7 +1411,7 @@ class TimerWindow(QMainWindow):
             
     def tray_icon_activated(self, reason):
         """托盘图标激活事件"""
-        if reason == QSystemTrayIcon.DoubleClick:
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self.toggle_visibility()
     
     def toggle_lock(self):
@@ -1307,11 +1420,11 @@ class TimerWindow(QMainWindow):
         
         if self.is_locked:
             # 锁定：只设置鼠标事件穿透，保留键盘事件以便快捷键仍然有效
-            self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             self.tray_icon.showMessage(
                 self.tr('app_name'),
                 self.tr('window_locked'),
-                QSystemTrayIcon.Information,
+                QSystemTrayIcon.MessageIcon.Information,
                 1000
             )
             # Windows原生通知 - 锁定
@@ -1327,7 +1440,7 @@ class TimerWindow(QMainWindow):
                     logger.warning("Windows toast failed: %s", e)
         else:
             # 解锁：恢复窗口交互
-            self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
             
             # Windows原生通知 - 解锁
             if toaster:
@@ -1345,7 +1458,7 @@ class TimerWindow(QMainWindow):
                 self.tray_icon.showMessage(
                     self.tr('app_name'),
                     self.tr('window_unlocked'),
-                    QSystemTrayIcon.Information,
+                    QSystemTrayIcon.MessageIcon.Information,
                     2000
                 )
         
@@ -1366,9 +1479,11 @@ class TimerWindow(QMainWindow):
             
             # 停止并清理媒体播放器
             if hasattr(self, 'media_player') and self.media_player:
-                if self.media_player.state() == QMediaPlayer.PlayingState:
+                if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
                     self.media_player.stop()
                 self.media_player.deleteLater()
+            if hasattr(self, 'audio_output') and self.audio_output:
+                self.audio_output.deleteLater()
             
             # 保存设置（立即保存，不延迟）
             self.save_settings(immediate=True)
@@ -1381,25 +1496,37 @@ class TimerWindow(QMainWindow):
         finally:
             QApplication.quit()
         
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, a0):
         """鼠标按下事件 - 用于拖动窗口"""
-        if event.button() == Qt.LeftButton and not self.is_locked and not self.is_fullscreen:
+        if a0 is None:
+            return
+        event = a0
+        if event.button() == Qt.MouseButton.LeftButton and not self.is_locked and not self.is_fullscreen:
             self.dragging = True
-            self.offset = event.globalPos() - self.pos()
+            self.offset = event.globalPosition().toPoint() - self.pos()
             
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, a0):
         """鼠标移动事件 - 用于拖动窗口"""
+        if a0 is None:
+            return
+        event = a0
         if self.dragging and not self.is_locked and not self.is_fullscreen:
-            self.move(event.globalPos() - self.offset)
+            self.move(event.globalPosition().toPoint() - self.offset)
             
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, a0):
         """鼠标释放事件 - 停止拖动"""
-        if event.button() == Qt.LeftButton:
+        if a0 is None:
+            return
+        event = a0
+        if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
             
     def contextMenuEvent(self, event):
         """右键菜单事件"""
+        if event is None:
+            return
         menu = QMenu(self)
+        self._apply_menu_style(menu)
         
         # 暂停/继续
         pause_action = QAction(self.tr('pause') if self.is_running else self.tr('continue'), self)
@@ -1445,7 +1572,11 @@ class TimerWindow(QMainWindow):
         quit_action.triggered.connect(self.quit_app)
         menu.addAction(quit_action)
         
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
+
+    def _apply_menu_style(self, menu: QMenu) -> None:
+        FluentStyleSheet.MENU.apply(menu)
+        menu.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         
     def switch_to_count_up(self):
         """切换到正计时"""
@@ -1461,14 +1592,17 @@ class TimerWindow(QMainWindow):
         self.save_settings()
         self.reset_timer()
             
-    def closeEvent(self, event):
+    def closeEvent(self, a0):
         """关闭事件 - 最小化到托盘而不是退出"""
+        if a0 is None:
+            return
+        event = a0
         event.ignore()
         self.hide()
         self.tray_icon.showMessage(
             self.tr('app_name'),
             self.tr('minimized_to_tray'),
-            QSystemTrayIcon.Information,
+            QSystemTrayIcon.MessageIcon.Information,
             TimerConstants.TRAY_MESSAGE_DURATION
         )
         
@@ -1479,23 +1613,26 @@ class TimerWindow(QMainWindow):
             if tray is None:
                 return
             style = self.style()
+            if style is None:
+                return
             # 优先：在倒计时完成的闪烁阶段，显示信息图标
             if getattr(self, 'is_flashing', False):
-                icon = style.standardIcon(QStyle.SP_MessageBoxInformation)
+                icon = style.standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
             else:
                 if getattr(self, 'is_running', False):
-                    icon = style.standardIcon(QStyle.SP_MediaPlay)
+                    icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
                 else:
                     # 未运行，区分是否已归零
                     if getattr(self, 'elapsed_seconds', 0) == 0:
-                        icon = style.standardIcon(QStyle.SP_MediaStop)
+                        icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaStop)
                     else:
-                        icon = style.standardIcon(QStyle.SP_MediaPause)
+                        icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
             tray.setIcon(icon)
         except Exception as e:
             logger.warning("Failed to update tray icon: %s", e)
 
-    def showEvent(self, event):
+    def showEvent(self, a0):
         """窗口显示时更新托盘图标"""
+        event = a0
         super().showEvent(event)
         self.update_tray_icon()
