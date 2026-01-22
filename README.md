@@ -26,7 +26,7 @@
 <h3 align="center">DesktopTimer | 桌面计时器</h3>
 
 <p align="center">
-基于 PyQt6 的轻量级桌面计时器，支持正计时/倒计时/时钟模式，系统托盘、快捷键、音效与闪烁提醒、多语言（中/英）以及丰富的外观自定义。
+基于 PyQt6 的轻量级桌面计时器，支持正计时/倒计时/时钟模式，系统托盘、快捷键、音效与闪烁提醒、多语言（中/英）以及丰富的外观自定义；设置页采用 PyQt6-Fluent-Widgets 组件。
 </p>
 
 <p align="center">
@@ -97,7 +97,7 @@
 ## 🛠️ 开发者指南
 
 ### 开发环境要求
-- Python 3.13（暂不支持 3.14）
+- Python 3.13（暂不支持 3.14，确保 UV 使用 3.13 解释器）
 - Windows 10/11
 - 依赖管理：UV（已迁移）
 > 注：如需 Qt Designer 等工具，可另行安装 `pyqt6-tools`（与项目运行依赖无关）。
@@ -129,6 +129,11 @@ uv run python -m PyInstaller DesktopTimer.spec --noconfirm
 ```
 打包完成后生成 `dist/DesktopTimer.exe`。请将 `img/`、`lang/`、`sounds/` 一并放入 `dist/` 目录。
 
+也可直接使用内置脚本一键完成清理、打包、复制资源与打包压缩：
+```pwsh
+tools\pyinstaller.bat
+```
+
 ### 文件结构
 ```
 DesktopTimer/
@@ -146,6 +151,7 @@ DesktopTimer/
 ├── uv.lock                    # UV 锁文件
 ├── requirements.txt           # Python 依赖（历史/兼容）
 ├── README.md                  # 项目说明
+├── tools/                     # 构建/打包脚本
 ├── /img/                      # 图标资源
 │   ├── timer_icon.ico
 │   └── ALP_STUDIO-logo-full.svg
@@ -196,7 +202,10 @@ DesktopTimer/
 5. 打包后资源路径异常？
    - 本项目已兼容 `sys.frozen` 场景；若自定义了运行目录，请保持资源与可执行文件同级。
 
-6. 切换语言后界面没变化？
+6. `DesktopTimer.egg-info/` 是什么？
+   - 这是 setuptools 构建产生的元数据目录，可在发布包或清理时忽略/删除。
+
+7. 切换语言后界面没变化？
    - 语言下拉框一旦切换就会立即应用到主窗口与托盘；若仍看到旧语言，可确认设置文件是否可写或查看日志输出。
 
 ---

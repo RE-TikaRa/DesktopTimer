@@ -24,6 +24,7 @@ DesktopTimer/
 ├── DesktopTimer.spec       # PyInstaller 脚本
 ├── pyproject.toml          # UV 项目配置
 ├── uv.lock                 # UV 锁文件
+├── tools/                  # 构建/打包脚本
 └── README.md / requirements.txt
 ```
 
@@ -52,6 +53,7 @@ DesktopTimer/
 - 安装依赖：`uv sync`
 - 运行调试：`uv run python main.py`
 - 打包：先 `uv sync --dev`，再 `uv run python -m PyInstaller DesktopTimer.spec --noconfirm`；记得将 `img/ lang/ sounds/ settings/` 复制到 `dist/`
+- 一键打包：`tools\pyinstaller.bat`（清理 → 同步 → 构建 → 复制资源 → 压缩）
 - DEBUG 日志：运行前设置 `DESKTOPTIMER_DEBUG=1` 可输出更详细日志
 
 ## 给 AI 代理的建议
@@ -73,4 +75,5 @@ DesktopTimer/
 ## 维护提醒
 - 优先中文描述，commit/PR 均请遵守 DNCL-1.0。
 - 当前环境：Windows 11 Pro 24H2，Python 3.13.3，具备完整网络与 GPU 能力，但项目主要依赖 PyQt6。
+- 打包方式：onefile + 外置资源目录（`DesktopTimer.spec` 未内置数据文件）。
 - 禁止擅自还原用户已有改动；操作前可 `git status` 快速确认工作区状态。

@@ -8,6 +8,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
+DesktopTimer.egg-info/
 .ruff_cache/
 *.log
 
