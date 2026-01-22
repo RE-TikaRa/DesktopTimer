@@ -1,19 +1,41 @@
 @echo off
-echo Cleaning old build...
-rmdir /s /q build
-rmdir /s /q dist
+setlocal
+for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+set "C_RESET=%ESC%[0m"
+set "C_RED=%ESC%[31m"
+set "C_GREEN=%ESC%[32m"
+set "C_YELLOW=%ESC%[33m"
+set "C_CYAN=%ESC%[36m"
+echo.
+echo %C_CYAN%======================================%C_RESET%
+echo %C_CYAN%DesktopTimer Build (UV + PyInstaller)%C_RESET%
+echo %C_CYAN%======================================%C_RESET%
 
-echo Syncing UV env...
-uv sync --dev
-
-echo Building...
-uv run python -m PyInstaller DesktopTimer.spec --noconfirm
-
-echo Copying resource folders to dist...
-set "DIST_DIR=dist"
-if not exist "%DIST_DIR%" (
-    mkdir "%DIST_DIR%"
+echo %C_YELLOW%[1/5] Cleaning old build...%C_RESET%
+if exist build (
+    rmdir /s /q build
+    echo   - build removed
 )
+if exist dist (
+    rmdir /s /q dist
+    echo   - dist removed
+)
+if exist DesktopTimer.zip (
+    del /q DesktopTimer.zip
+    echo   - DesktopTimer.zip removed
+)
+
+echo %C_YELLOW%[2/5] Syncing UV env...%C_RESET%
+uv sync --dev
+if errorlevel 1 goto :fail
+
+echo %C_YELLOW%[3/5] Building exe...%C_RESET%
+uv run python -m PyInstaller DesktopTimer.spec --noconfirm
+if errorlevel 1 goto :fail
+
+echo %C_YELLOW%[4/5] Copying resource folders...%C_RESET%
+set "DIST_DIR=dist"
+if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 for %%D in (img lang sounds settings) do (
     if exist "%%D" (
         echo   - %%D
@@ -23,10 +45,23 @@ for %%D in (img lang sounds settings) do (
     )
 )
 
-echo Packaging dist into DesktopTimer.zip...
-if exist DesktopTimer.zip del /q DesktopTimer.zip
+echo %C_YELLOW%[5/5] Packaging dist into DesktopTimer.zip...%C_RESET%
 powershell -Command "Compress-Archive -Path '%DIST_DIR%\*' -DestinationPath 'DesktopTimer.zip' -Force"
+if errorlevel 1 goto :fail
+
+echo.
+echo %C_GREEN%[OK]%C_RESET% Build complete.
+echo EXE: %DIST_DIR%\DesktopTimer.exe
+echo ZIP: DesktopTimer.zip
+echo RES: %DIST_DIR%\img  %DIST_DIR%\lang  %DIST_DIR%\sounds  %DIST_DIR%\settings
+goto :done
+
+:fail
+echo.
+echo %C_RED%[ERROR]%C_RESET% Build failed.
+exit /b 1
 
 :done
+echo.
 echo Done.
 pause

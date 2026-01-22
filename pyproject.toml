@@ -1,6 +1,6 @@
 [project]
 name = "DesktopTimer"
-version = "1.0.4"
+version = "2.0.0"
 description = "Lightweight PyQt6 desktop timer with count up, countdown, and clock modes."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
