@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon,
     QVBoxLayout,
 )
-from qfluentwidgets import FluentIcon, FluentStyleSheet, Theme, setTheme, setThemeColor
+from qfluentwidgets import FluentIcon, FluentStyleSheet, Theme, setTheme
 
 try:
     from win10toast import ToastNotifier
@@ -280,8 +280,6 @@ class TimerWindow(QMainWindow):
             "sound_volume": 80,
             "enable_windows_toast": True,
             "theme_mode": "auto",
-            "theme_color": "#0078D4",
-            "theme_custom_colors": ["", ""],
             # 语言设置
             "language": "zh_CN",
             # 时钟模式设置
@@ -433,13 +431,12 @@ class TimerWindow(QMainWindow):
                 fixed = True
 
         theme_mode = self.settings.get("theme_mode", "auto")
+        if isinstance(theme_mode, int):
+            theme_mode = {0: "auto", 1: "light", 2: "dark"}.get(theme_mode, "auto")
         if theme_mode not in ("auto", "light", "dark"):
-            self.settings["theme_mode"] = "auto"
-            fixed = True
-
-        theme_color = self.settings.get("theme_color", "#0078D4")
-        if not isinstance(theme_color, str) or not theme_color.startswith('#') or len(theme_color) != 7:
-            self.settings["theme_color"] = "#0078D4"
+            theme_mode = "auto"
+        if theme_mode != self.settings.get("theme_mode"):
+            self.settings["theme_mode"] = theme_mode
             fixed = True
                 
         # 验证语言设置
@@ -798,26 +795,29 @@ class TimerWindow(QMainWindow):
         
         # 移动窗口到居中位置
         self.move(max(0, x), max(0, y))
-        
-    def apply_settings(self, preserve_elapsed=False):
-        """应用设置"""
-        self._ensure_language()
 
-        theme_mode = self.settings.get("theme_mode", "auto")
+    def _apply_fluent_theme(self, theme_mode: str | None, lazy: bool = True) -> None:
+        if theme_mode not in ("auto", "light", "dark"):
+            theme_mode = "auto"
         if theme_mode == "light":
             theme = Theme.LIGHT
         elif theme_mode == "dark":
             theme = Theme.DARK
         else:
             theme = Theme.AUTO
-        theme_color = self.settings.get("theme_color", "#0078D4")
-        setThemeColor(theme_color, save=False, lazy=True)
-        setTheme(theme, save=False, lazy=True)
-        theme_state = (theme_mode, theme_color)
+        theme_state = theme_mode
         if theme_state != getattr(self, "_last_theme_state", None):
             self._last_theme_state = theme_state
+            setTheme(theme, save=False, lazy=lazy)
             if getattr(self, "tray_icon", None) is not None:
                 self.create_tray_menu()
+        
+    def apply_settings(self, preserve_elapsed=False):
+        """应用设置"""
+        self._ensure_language()
+
+        theme_mode = self.settings.get("theme_mode", "auto")
+        self._apply_fluent_theme(theme_mode, lazy=True)
         # 应用字体
         font = QFont(
             self.settings.get("font_family", "Consolas"),
@@ -889,7 +889,7 @@ class TimerWindow(QMainWindow):
             self.time_label.adjustSize()
             self.resize(self.time_label.size())
             self.center_on_screen()
-        
+
         # 更新托盘图标
         self.update_tray_icon()
         self.setWindowTitle(self.tr('app_name'))
@@ -926,7 +926,7 @@ class TimerWindow(QMainWindow):
         """������ͼ��/�Ҽ��˵��еĿ��ٹ���˵�"""
         preset_menu = QMenu(self.tr('mode_switch_menu'), self)
         self._apply_menu_style(preset_menu)
-        preset_menu.setIcon(FluentIcon.MENU.icon())
+        preset_menu.setIcon(FluentIcon.MENU.qicon())
 
         countup_action = QAction(self.tr('count_up_mode'), self)
         self._apply_action_icon(countup_action, FluentIcon.STOP_WATCH)
@@ -938,7 +938,7 @@ class TimerWindow(QMainWindow):
 
         countdown_menu = QMenu(self.tr('countdown_mode'), self)
         self._apply_menu_style(countdown_menu)
-        countdown_menu.setIcon(FluentIcon.CALENDAR.icon())
+        countdown_menu.setIcon(FluentIcon.CALENDAR.qicon())
         countdown_presets = self.settings.get('countdown_presets', [])
         if countdown_presets:
             for preset in countdown_presets:
@@ -1012,7 +1012,7 @@ class TimerWindow(QMainWindow):
         tray_menu.addSeparator()
         window_menu = QMenu(self.tr('window_menu'), self)
         self._apply_menu_style(window_menu)
-        window_menu.setIcon(FluentIcon.VIEW.icon())
+        window_menu.setIcon(FluentIcon.VIEW.qicon())
 
         settings_action = QAction(self.tr('settings'), self)
         self._apply_action_icon(settings_action, FluentIcon.SETTING)
@@ -1585,7 +1585,7 @@ class TimerWindow(QMainWindow):
         menu.addSeparator()
         window_menu = QMenu(self.tr('window_menu'), self)
         self._apply_menu_style(window_menu)
-        window_menu.setIcon(FluentIcon.VIEW.icon())
+        window_menu.setIcon(FluentIcon.VIEW.qicon())
 
         settings_action = QAction(self.tr('settings'), self)
         self._apply_action_icon(settings_action, FluentIcon.SETTING)
@@ -1628,13 +1628,30 @@ class TimerWindow(QMainWindow):
         menu.exec(event.globalPos())
 
     def _apply_menu_style(self, menu: QMenu) -> None:
-        FluentStyleSheet.MENU.apply(menu)
+        self._refresh_menu_style(menu)
         menu.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        if not menu.property("_fluent_menu_hooked"):
+            menu.setProperty("_fluent_menu_hooked", True)
+            menu.aboutToShow.connect(lambda m=menu: self._refresh_menu_style(m))
+
+    def _refresh_menu_style(self, menu: QMenu) -> None:
+        theme = self._sync_menu_theme()
+        FluentStyleSheet.MENU.apply(menu, theme)
+
+    def _sync_menu_theme(self) -> Theme:
+        theme_mode = self.settings.get("theme_mode", "auto")
+        if theme_mode == "light":
+            theme = Theme.LIGHT
+        elif theme_mode == "dark":
+            theme = Theme.DARK
+        else:
+            theme = Theme.AUTO
+        return theme
 
     @staticmethod
     def _apply_action_icon(action: QAction, fluent_icon: FluentIcon) -> None:
         try:
-            action.setIcon(fluent_icon.icon())
+            action.setIcon(fluent_icon.qicon())
         except Exception:
             pass
         

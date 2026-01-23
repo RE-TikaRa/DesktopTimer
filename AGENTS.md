@@ -34,7 +34,7 @@ DesktopTimer/
   - 设置生命周期：`load_settings()` → `_normalize_countdown_presets()` / `_validate_and_fix_settings()` → `apply_settings()`，延迟写入由 `save_settings()` + `_do_save_settings()` 控制。
   - 托盘：`build_quick_presets_menu()` 提供正/倒/时钟切换、倒计时预设列表、一次性自定义倒计时（`prompt_custom_countdown()`）。
   - 倒计时预设：`countdown_presets` 支持 `labels` 字典，按语言显示，缺省时回退到 `name_key` 或时长描述。
-  - 主题：支持浅色/深色/跟随系统与主题色，菜单与托盘样式跟随主题。
+  - 主题：支持浅色/深色/跟随系统，菜单与托盘样式跟随主题。
   - 提醒能力：`QMediaPlayer` + `QAudioOutput` 播放音效、系统 Beep、窗口闪烁、托盘气泡、可选 `win10toast` 通知（设置页可调音量与开关）。
   - 快捷键：`DEFAULT_SHORTCUTS` + 用户自定义，`reload_shortcuts()` 用于设置变更后重绑。
 

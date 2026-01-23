@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import random
 import uuid
 from typing import TYPE_CHECKING, cast
@@ -26,6 +27,7 @@ from qfluentwidgets import (
     ComboBox as QComboBox,
     CardWidget,
     Dialog,
+    FluentStyleSheet,
     FluentIcon,
     IconWidget,
     LineEdit as QLineEdit,
@@ -41,7 +43,10 @@ from qfluentwidgets import (
     SettingCard,
     SettingCardGroup,
     SwitchSettingCard,
+    Theme,
+    setTheme,
 )
+from qfluentwidgets.common.config import isDarkTheme
 
 from .constants import (
     APP_VERSION,
@@ -66,14 +71,12 @@ class SettingsDialog(QDialog):
         self._current_lang_code = self.parent_window.settings.get("language", "zh_CN")
         self._initial_lang_code = self._current_lang_code
         self._initial_theme_mode = self.parent_window.settings.get("theme_mode", "auto")
-        self._initial_theme_color = self.parent_window.settings.get("theme_color", "#0078D4")
-        raw_custom_colors = self.parent_window.settings.get("theme_custom_colors", [])
-        self._initial_theme_custom_colors = list(raw_custom_colors) if isinstance(raw_custom_colors, list) else []
         self._other_lang_code = self._find_other_language(self._current_lang_code)
         self._preset_data = self._load_preset_snapshot()
         self._preset_filter_text = ""
         self._preset_sort_mode = self.parent_window.settings.get("preset_sort_mode", "manual")
         self._applied_once = False
+        self._last_fluent_theme_state: str | None = None
         self.setWindowTitle(self.tr('settings_title'))
         
         # 设置窗口图标
@@ -89,6 +92,7 @@ class SettingsDialog(QDialog):
         self.setMinimumSize(800, 600)  # 允许用户缩小窗口
         self.resize(850, 800)  # 设置默认大小
         self.init_ui()
+        self._sync_fluent_theme(self.parent_window.settings.get("theme_mode", "auto"))
         
     def tr(self, sourceText: str, disambiguation: str | None = None, n: int = -1) -> str:  # type: ignore[override]
         """翻译助手"""
@@ -256,6 +260,10 @@ class SettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+    def showEvent(self, event):  # type: ignore[override]
+        super().showEvent(event)
+        self._apply_title_bar_theme()
+
     def _add_tab(self, widget: QWidget, route_key: str, title: str) -> None:
         widget.setObjectName(route_key)
         self.stacked_widget.addWidget(widget)
@@ -372,6 +380,7 @@ class SettingsDialog(QDialog):
 
         widget.setLayout(layout)
         scroll.setWidget(widget)
+        scroll.enableTransparentBackground()
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout()
@@ -568,67 +577,7 @@ class SettingsDialog(QDialog):
         self.theme_mode_card.hBoxLayout.addSpacing(16)
         theme_group.addSettingCard(self.theme_mode_card)
         self.theme_mode_combo.currentIndexChanged.connect(self._preview_theme_change)
-
-        theme_color = self.parent_window.settings.get("theme_color", "#0078D4")
-        self.theme_color_btn = QPushButton()
-        self.theme_color_btn.setFixedSize(80, 30)
-        self.update_color_button(self.theme_color_btn, theme_color)
-        self.theme_color_btn.clicked.connect(self.choose_theme_color)
-        self.theme_color_card = SettingCard(
-            FluentIcon.PALETTE,
-            self.tr('theme_color'),
-            theme_color,
-            parent=self,
-        )
-        preset_container = QWidget()
-        preset_layout = QHBoxLayout(preset_container)
-        preset_layout.setContentsMargins(0, 0, 0, 0)
-        preset_layout.setSpacing(6)
-        preset_colors = [
-            "#0078D4",
-            "#00B294",
-            "#E81123",
-            "#FFB900",
-            "#8E8CD8",
-            "#2D7D9A",
-        ]
-        self.theme_color_preset_buttons = []
-        for color in preset_colors:
-            btn = QPushButton()
-            btn.setFixedSize(22, 22)
-            btn.setStyleSheet(
-                f"background-color: {color}; border: 2px solid #666; border-radius: 4px;"
-            )
-            btn.clicked.connect(lambda _, c=color: self._set_theme_color(c))
-            preset_layout.addWidget(btn)
-            self.theme_color_preset_buttons.append((color, btn))
-        custom_colors = self._normalize_theme_custom_colors(
-            self.parent_window.settings.get("theme_custom_colors", [])
-        )
-        self.parent_window.settings["theme_custom_colors"] = custom_colors
-        self.theme_color_custom_buttons = []
-        for idx, color in enumerate(custom_colors):
-            btn = QPushButton()
-            btn.setFixedSize(22, 22)
-            btn.clicked.connect(lambda _, i=idx: self._choose_custom_theme_color(i))
-            preset_layout.addWidget(btn)
-            self.theme_color_custom_buttons.append((idx, btn))
-        self.theme_color_card.hBoxLayout.addWidget(
-            preset_container,
-            0,
-            Qt.AlignmentFlag.AlignRight,
-        )
-        self.theme_color_card.hBoxLayout.addSpacing(6)
-        self.theme_color_card.hBoxLayout.addWidget(
-            self.theme_color_btn,
-            0,
-            Qt.AlignmentFlag.AlignRight,
-        )
-        self.theme_color_card.hBoxLayout.addSpacing(16)
-        theme_group.addSettingCard(self.theme_color_card)
         layout.addWidget(theme_group)
-        self._update_theme_color_presets(theme_color)
-        self._update_theme_color_custom_buttons(theme_color)
 
         night_group = SettingCardGroup(self.tr('night_mode'), widget)
         self.night_mode_card = SwitchSettingCard(
@@ -647,6 +596,7 @@ class SettingsDialog(QDialog):
         
         # 设置滚动区域
         scroll.setWidget(widget)
+        scroll.enableTransparentBackground()
         
         # 创建包装器小部件
         wrapper = QWidget()
@@ -1061,6 +1011,7 @@ class SettingsDialog(QDialog):
         self._refresh_preset_list()
         self._update_preset_button_states()
         scroll.setWidget(widget)
+        scroll.enableTransparentBackground()
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout()
@@ -1598,6 +1549,7 @@ class SettingsDialog(QDialog):
         
         # 设置滚动区域
         scroll.setWidget(widget)
+        scroll.enableTransparentBackground()
         
         # 创建包装器小部件
         wrapper = QWidget()
@@ -1682,107 +1634,66 @@ class SettingsDialog(QDialog):
             if hasattr(self, 'bg_color_card'):
                 self.bg_color_card.setContent(color.name())
 
-    def _set_theme_color(self, hex_color: str) -> None:
-        self.parent_window.settings["theme_color"] = hex_color
-        if hasattr(self, 'theme_color_btn'):
-            self.update_color_button(self.theme_color_btn, hex_color)
-        if hasattr(self, 'theme_color_card'):
-            self.theme_color_card.setContent(hex_color)
-        if hasattr(self, 'theme_color_preset_buttons'):
-            theme_mode = None
-            if hasattr(self, 'theme_mode_combo'):
-                theme_mode = self.theme_mode_combo.currentData()
-            self._update_theme_color_presets(hex_color, theme_mode)
-            self._update_theme_color_custom_buttons(hex_color, theme_mode)
-        self.parent_window.apply_settings(preserve_elapsed=True)
-
-    def choose_theme_color(self):
-        """选择主题色"""
-        color = self._pick_color(
-            self.tr("theme_color"),
-            self.parent_window.settings.get("theme_color", "#0078D4"),
-        )
-        if color is not None and color.isValid():
-            self._set_theme_color(color.name())
-            
     def update_color_button(self, button, color):
         """更新颜色按钮的显示"""
         button.setStyleSheet(f'background-color: {color}; border: 1px solid #ccc;')
 
-    @staticmethod
-    def _normalize_theme_custom_colors(raw) -> list[str]:
-        colors = []
-        if isinstance(raw, list):
-            for item in raw:
-                if isinstance(item, str):
-                    colors.append(item.strip())
-        colors = colors[:2]
-        while len(colors) < 2:
-            colors.append("")
-        return colors
+    def _sync_fluent_theme(self, theme_key: str | None = None) -> None:
+        if theme_key is None:
+            theme_key = self.parent_window.settings.get("theme_mode", "auto")
+        if theme_key not in ("auto", "light", "dark"):
+            theme_key = "auto"
+        theme_state = theme_key
+        if theme_state == self._last_fluent_theme_state:
+            return
+        self._last_fluent_theme_state = theme_state
+        if theme_key == "light":
+            theme = Theme.LIGHT
+        elif theme_key == "dark":
+            theme = Theme.DARK
+        else:
+            theme = Theme.AUTO
+        setTheme(theme, save=False, lazy=True)
+        FluentStyleSheet.DIALOG.apply(self)
+        FluentStyleSheet.FLUENT_WINDOW.apply(self.stacked_widget)
+        self._apply_title_bar_theme()
 
-    def _update_theme_color_presets(self, current_hex: str, theme_mode: str | None = None) -> None:
-        if theme_mode is None:
-            theme_mode = self.parent_window.settings.get("theme_mode", "auto")
-        border_selected = "#ffffff" if theme_mode == "dark" else "#222222"
-        border_default = "#666666"
-        for color, btn in getattr(self, "theme_color_preset_buttons", []):
-            border = border_selected if color.lower() == current_hex.lower() else border_default
-            btn.setStyleSheet(
-                f"background-color: {color}; border: 2px solid {border}; border-radius: 4px;"
+    def _apply_title_bar_theme(self) -> None:
+        if sys.platform != "win32":
+            return
+        try:
+            import ctypes
+
+            hwnd = int(self.winId())
+            use_dark = 1 if isDarkTheme() else 0
+            value = ctypes.c_int(use_dark)
+            attr = 20  # DWMWA_USE_IMMERSIVE_DARK_MODE
+            res = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                attr,
+                ctypes.byref(value),
+                ctypes.sizeof(value),
             )
-
-    def _update_theme_color_custom_buttons(self, current_hex: str, theme_mode: str | None = None) -> None:
-        if theme_mode is None:
-            theme_mode = self.parent_window.settings.get("theme_mode", "auto")
-        border_selected = "#ffffff" if theme_mode == "dark" else "#222222"
-        border_default = "#666666"
-        colors = self._normalize_theme_custom_colors(
-            self.parent_window.settings.get("theme_custom_colors", [])
-        )
-        self.parent_window.settings["theme_custom_colors"] = colors
-        for idx, btn in getattr(self, "theme_color_custom_buttons", []):
-            color = colors[idx] if idx < len(colors) else ""
-            if color:
-                border = border_selected if color.lower() == current_hex.lower() else border_default
-                btn.setText("")
-                btn.setStyleSheet(
-                    f"background-color: {color}; border: 2px solid {border}; border-radius: 4px;"
+            if res != 0:
+                attr = 19
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    attr,
+                    ctypes.byref(value),
+                    ctypes.sizeof(value),
                 )
-            else:
-                btn.setText("+")
-                btn.setStyleSheet(
-                    "background-color: transparent; border: 1px dashed #888; border-radius: 4px;"
-                )
+        except Exception:
+            pass
 
     def _preview_theme_change(self, _index: int) -> None:
         theme_key = self.theme_mode_combo.currentData()
         if theme_key not in ("auto", "light", "dark"):
-            theme_key = "auto"
+            theme_key = {0: "auto", 1: "light", 2: "dark"}.get(
+                self.theme_mode_combo.currentIndex(), "auto"
+            )
         self.parent_window.settings["theme_mode"] = theme_key
-        self._update_theme_color_presets(
-            self.parent_window.settings.get("theme_color", "#0078D4"),
-            theme_key,
-        )
-        self._update_theme_color_custom_buttons(
-            self.parent_window.settings.get("theme_color", "#0078D4"),
-            theme_key,
-        )
-        self.parent_window.apply_settings(preserve_elapsed=True)
-
-    def _choose_custom_theme_color(self, index: int) -> None:
-        colors = self._normalize_theme_custom_colors(
-            self.parent_window.settings.get("theme_custom_colors", [])
-        )
-        initial = colors[index] if index < len(colors) and colors[index] else self.parent_window.settings.get(
-            "theme_color",
-            "#0078D4",
-        )
-        picked = self._pick_color(self.tr("theme_color"), initial)
-        if picked is not None and picked.isValid():
-            colors[index] = picked.name()
-            self.parent_window.settings["theme_custom_colors"] = colors
-            self._set_theme_color(picked.name())
+        self.parent_window._apply_fluent_theme(theme_key, lazy=True)
+        self._sync_fluent_theme(theme_key)
         
     def choose_sound_file(self):
         """选择铃声文件"""
@@ -1984,11 +1895,10 @@ class SettingsDialog(QDialog):
         self.parent_window.settings["enable_windows_toast"] = self.enable_toast_card.isChecked()
         theme_mode = self.theme_mode_combo.currentData()
         if theme_mode not in ("auto", "light", "dark"):
-            theme_mode = "auto"
+            theme_mode = {0: "auto", 1: "light", 2: "dark"}.get(
+                self.theme_mode_combo.currentIndex(), "auto"
+            )
         self.parent_window.settings["theme_mode"] = theme_mode
-        self.parent_window.settings["theme_color"] = self.parent_window.settings.get(
-            "theme_color", "#0078D4"
-        )
         sort_mode = self.preset_sort_combo.currentData()
         if sort_mode not in ("manual", "name", "duration"):
             sort_mode = "manual"
@@ -2008,8 +1918,9 @@ class SettingsDialog(QDialog):
         
         # 应用窗口大小设置（滑块控制字体大小）
         self.parent_window.settings["font_size"] = self.size_slider.value()
-        
+
         self.parent_window.apply_settings()
+        self._sync_fluent_theme(theme_mode)
         # 让主窗口根据新快捷键重载绑定
         try:
             self.parent_window.reload_shortcuts()
@@ -2030,8 +1941,6 @@ class SettingsDialog(QDialog):
         if not getattr(self, "_applied_once", False):
             self.parent_window.settings["language"] = self._initial_lang_code
             self.parent_window.settings["theme_mode"] = self._initial_theme_mode
-            self.parent_window.settings["theme_color"] = self._initial_theme_color
-            self.parent_window.settings["theme_custom_colors"] = list(self._initial_theme_custom_colors)
             self.parent_window.apply_settings(preserve_elapsed=True)
             self.parent_window.create_tray_menu()
             try:
