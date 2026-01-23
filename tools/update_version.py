@@ -7,7 +7,7 @@ import re
 import sys
 
 
-def _replace(path: Path, pattern: str, repl: str, count: int = 0, flags: int = 0) -> int:
+def _replace(path: Path, pattern: str, repl, count: int = 0, flags: int = 0) -> int:
     text = path.read_text(encoding="utf-8")
     new_text, n = re.subn(pattern, repl, text, count=count, flags=flags)
     if n:
@@ -35,10 +35,26 @@ def main() -> int:
     targets = [
         (root / "module" / "constants.py", r'APP_VERSION\s*=\s*"[^"]+"', f'APP_VERSION = "{version}"'),
         (root / "pyproject.toml", r'(?m)^version\s*=\s*"[^"]+"', f'version = "{version}"'),
-        (root / "setup" / "setup.iss", r'(#define\s+MyAppVersion\s+")([^"]+)(")', rf'\1{version}\3'),
-        (root / "AGENTS.md", r'(\*\*DesktopTimer\s+)[0-9A-Za-z\.\-]+', rf'\1{version}'),
-        (root / "README.md", r'(?m)^### v[^\s]+ \(\d{4}-\d{2}-\d{2}\)', f'### v{version} ({release_date})'),
-        (root / "uv.lock", r'(name = "desktoptimer"\s*\nversion = ")[^"]+(")', rf'\1{version}\2'),
+        (
+            root / "setup" / "setup.iss",
+            r'(#define\s+MyAppVersion\s+")([^"]+)(")',
+            lambda m: f"{m.group(1)}{version}{m.group(3)}",
+        ),
+        (
+            root / "AGENTS.md",
+            r'(\*\*DesktopTimer\s+)[0-9A-Za-z\.\-]+',
+            lambda m: f"{m.group(1)}{version}",
+        ),
+        (
+            root / "README.md",
+            r'(?m)^### v[^\s]+ \(\d{4}-\d{2}-\d{2}\)',
+            f"### v{version} ({release_date})",
+        ),
+        (
+            root / "uv.lock",
+            r'(name = "desktoptimer"\s*\nversion = ")[^"]+(")',
+            lambda m: f"{m.group(1)}{version}{m.group(2)}",
+        ),
     ]
 
     updated = 0
