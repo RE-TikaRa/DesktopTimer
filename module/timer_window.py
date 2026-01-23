@@ -2,16 +2,16 @@ import json
 import logging
 import os
 import random
+import types
 import uuid
 
-from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QAction, QFont, QIcon, QKeySequence, QIntValidator, QShortcut
+from PyQt6.QtCore import QMargins, QPoint, Qt, QTimer, QUrl
+from PyQt6.QtGui import QAction, QCursor, QFont, QIcon, QKeySequence, QIntValidator, QShortcut
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
-    QMenu,
     QMessageBox,
     QDialog,
     QDialogButtonBox,
@@ -21,7 +21,16 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon,
     QVBoxLayout,
 )
-from qfluentwidgets import FluentIcon, FluentStyleSheet, Theme, setTheme
+from qfluentwidgets import (
+    CheckableMenu,
+    CheckableSystemTrayMenu,
+    FluentIcon,
+    MenuAnimationType,
+    RoundMenu,
+    SystemTrayMenu,
+    Theme,
+    setTheme,
+)
 
 try:
     from win10toast import ToastNotifier
@@ -119,6 +128,7 @@ class TimerWindow(QMainWindow):
         self._current_language = self.l18n.lang_code
         self.load_settings()
         self._last_theme_state = None
+        self._menu_exec_patched: set[int] = set()
         # 启动时根据设置决定初始模式
         try:
             behavior = self.settings.get('startup_mode_behavior', 'restore')
@@ -921,12 +931,43 @@ class TimerWindow(QMainWindow):
         
         # 双击托盘图标显示/隐藏窗口
         self.tray_icon.activated.connect(self.tray_icon_activated)
+
+    def _new_menu(self, title: str | None = None, *, is_tray: bool = False, checkable: bool = False) -> RoundMenu:
+        if is_tray:
+            menu_cls = CheckableSystemTrayMenu if checkable else SystemTrayMenu
+        else:
+            menu_cls = CheckableMenu if checkable else RoundMenu
+        menu = menu_cls(title or "", self)
+        if hasattr(menu, "timer"):
+            try:
+                menu.timer.setInterval(0)
+            except Exception:
+                pass
+        if id(menu) not in self._menu_exec_patched:
+            def _exec_no_ani(self, pos, ani=True, aniType=MenuAnimationType.DROP_DOWN):
+                return RoundMenu.exec(self, pos, ani=False, aniType=MenuAnimationType.NONE)
+            menu.exec = types.MethodType(_exec_no_ani, menu)
+            self._menu_exec_patched.add(id(menu))
+        return menu
+
+    def _hold_menu(self, menu: RoundMenu, attr_name: str) -> None:
+        setattr(self, attr_name, menu)
+        menu.closedSignal.connect(lambda name=attr_name: self._clear_menu(name))
+
+    def _clear_menu(self, attr_name: str) -> None:
+        if getattr(self, attr_name, None) is not None:
+            setattr(self, attr_name, None)
+
+    def _exec_menu(self, menu: RoundMenu, pos: QPoint) -> None:
+        layout = menu.layout()
+        margins = layout.contentsMargins() if layout is not None else QMargins(0, 0, 0, 0)
+        adjusted = QPoint(pos.x() + margins.left(), pos.y() + 4)
+        menu.exec(adjusted, ani=False, aniType=MenuAnimationType.NONE)
         
-    def build_quick_presets_menu(self):
+    def build_quick_presets_menu(self, *, is_tray: bool = False) -> RoundMenu:
         """������ͼ��/�Ҽ��˵��еĿ��ٹ���˵�"""
-        preset_menu = QMenu(self.tr('mode_switch_menu'), self)
-        self._apply_menu_style(preset_menu)
-        preset_menu.setIcon(FluentIcon.MENU.qicon())
+        preset_menu = self._new_menu(self.tr('mode_switch_menu'), is_tray=is_tray, checkable=True)
+        preset_menu.setIcon(FluentIcon.MENU)
 
         countup_action = QAction(self.tr('count_up_mode'), self)
         self._apply_action_icon(countup_action, FluentIcon.STOP_WATCH)
@@ -936,9 +977,8 @@ class TimerWindow(QMainWindow):
 
         preset_menu.addSeparator()
 
-        countdown_menu = QMenu(self.tr('countdown_mode'), self)
-        self._apply_menu_style(countdown_menu)
-        countdown_menu.setIcon(FluentIcon.CALENDAR.qicon())
+        countdown_menu = self._new_menu(self.tr('countdown_mode'), is_tray=is_tray)
+        countdown_menu.setIcon(FluentIcon.CALENDAR)
         countdown_presets = self.settings.get('countdown_presets', [])
         if countdown_presets:
             for preset in countdown_presets:
@@ -985,8 +1025,7 @@ class TimerWindow(QMainWindow):
         
     def create_tray_menu(self):
         """创建托盘菜单"""
-        tray_menu = QMenu()
-        self._apply_menu_style(tray_menu)
+        tray_menu = self._new_menu(is_tray=True)
         
         # 开始/暂停动作
         pause_text = self.tr('pause') if self.is_running else self.tr('continue')
@@ -995,8 +1034,6 @@ class TimerWindow(QMainWindow):
             self.pause_action,
             FluentIcon.PAUSE if self.is_running else FluentIcon.PLAY,
         )
-        self.pause_action.setCheckable(True)
-        self.pause_action.setChecked(self.is_running)
         self.pause_action.triggered.connect(self.toggle_pause)
         tray_menu.addAction(self.pause_action)
         
@@ -1007,12 +1044,11 @@ class TimerWindow(QMainWindow):
         tray_menu.addAction(reset_action)
         
         tray_menu.addSeparator()
-        tray_menu.addMenu(self.build_quick_presets_menu())
+        tray_menu.addMenu(self.build_quick_presets_menu(is_tray=True))
         
         tray_menu.addSeparator()
-        window_menu = QMenu(self.tr('window_menu'), self)
-        self._apply_menu_style(window_menu)
-        window_menu.setIcon(FluentIcon.VIEW.qicon())
+        window_menu = self._new_menu(self.tr('window_menu'), is_tray=True)
+        window_menu.setIcon(FluentIcon.VIEW)
 
         settings_action = QAction(self.tr('settings'), self)
         self._apply_action_icon(settings_action, FluentIcon.SETTING)
@@ -1052,7 +1088,7 @@ class TimerWindow(QMainWindow):
         quit_action.triggered.connect(self.quit_app)
         tray_menu.addAction(quit_action)
         
-        self.tray_icon.setContextMenu(tray_menu)
+        self._tray_menu = tray_menu
         
     def init_timer(self):
         """初始化定时器"""
@@ -1450,6 +1486,16 @@ class TimerWindow(QMainWindow):
         """托盘图标激活事件"""
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self.toggle_visibility()
+        elif reason == QSystemTrayIcon.ActivationReason.Context:
+            self.show_tray_menu()
+
+    def show_tray_menu(self) -> None:
+        self.create_tray_menu()
+        menu = getattr(self, "_tray_menu", None)
+        if menu is None:
+            return
+        self._hold_menu(menu, "_tray_menu")
+        self._exec_menu(menu, QCursor.pos())
     
     def toggle_lock(self):
         """切换窗口锁定状态"""
@@ -1562,8 +1608,7 @@ class TimerWindow(QMainWindow):
         """右键菜单事件"""
         if event is None:
             return
-        menu = QMenu(self)
-        self._apply_menu_style(menu)
+        menu = self._new_menu()
         
         # 暂停/继续
         pause_action = QAction(self.tr('pause') if self.is_running else self.tr('continue'), self)
@@ -1583,9 +1628,8 @@ class TimerWindow(QMainWindow):
         menu.addSeparator()
         menu.addMenu(self.build_quick_presets_menu())
         menu.addSeparator()
-        window_menu = QMenu(self.tr('window_menu'), self)
-        self._apply_menu_style(window_menu)
-        window_menu.setIcon(FluentIcon.VIEW.qicon())
+        window_menu = self._new_menu(self.tr('window_menu'))
+        window_menu.setIcon(FluentIcon.VIEW)
 
         settings_action = QAction(self.tr('settings'), self)
         self._apply_action_icon(settings_action, FluentIcon.SETTING)
@@ -1625,28 +1669,8 @@ class TimerWindow(QMainWindow):
         quit_action.triggered.connect(self.quit_app)
         menu.addAction(quit_action)
         
-        menu.exec(event.globalPos())
-
-    def _apply_menu_style(self, menu: QMenu) -> None:
-        self._refresh_menu_style(menu)
-        menu.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        if not menu.property("_fluent_menu_hooked"):
-            menu.setProperty("_fluent_menu_hooked", True)
-            menu.aboutToShow.connect(lambda m=menu: self._refresh_menu_style(m))
-
-    def _refresh_menu_style(self, menu: QMenu) -> None:
-        theme = self._sync_menu_theme()
-        FluentStyleSheet.MENU.apply(menu, theme)
-
-    def _sync_menu_theme(self) -> Theme:
-        theme_mode = self.settings.get("theme_mode", "auto")
-        if theme_mode == "light":
-            theme = Theme.LIGHT
-        elif theme_mode == "dark":
-            theme = Theme.DARK
-        else:
-            theme = Theme.AUTO
-        return theme
+        self._hold_menu(menu, "_context_menu")
+        self._exec_menu(menu, event.globalPos())
 
     @staticmethod
     def _apply_action_icon(action: QAction, fluent_icon: FluentIcon) -> None:

@@ -240,10 +240,6 @@ class SettingsDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
-        apply_btn = QPushButton(self.tr('apply'))
-        apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        apply_btn.clicked.connect(self.apply_settings)
-        
         ok_btn = PrimaryPushButton(self.tr('ok'))
         ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         ok_btn.clicked.connect(self.accept_settings)
@@ -253,7 +249,6 @@ class SettingsDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         
         button_layout.addStretch()
-        button_layout.addWidget(apply_btn)
         button_layout.addWidget(ok_btn)
         button_layout.addWidget(cancel_btn)
         
@@ -557,7 +552,7 @@ class SettingsDialog(QDialog):
             ('dark', self.tr('theme_dark')),
         ]
         for key, label in theme_items:
-            self.theme_mode_combo.addItem(label, key)
+            self.theme_mode_combo.addItem(label, QIcon(), key)
         current_theme = self.parent_window.settings.get("theme_mode", "auto")
         for i in range(self.theme_mode_combo.count()):
             if self.theme_mode_combo.itemData(i) == current_theme:
@@ -684,7 +679,7 @@ class SettingsDialog(QDialog):
             ('beep_flash', self.tr('beep_flash')),
         ]
         for key, label in action_items:
-            self.countdown_action.addItem(label, key)
+            self.countdown_action.addItem(label, QIcon(), key)
         current_key = self.parent_window.settings.get("countdown_action_key")
         if current_key not in ('beep', 'flash', 'beep_flash'):
             current_key = self.parent_window.derive_action_key(
@@ -903,7 +898,7 @@ class SettingsDialog(QDialog):
             ("duration", self.tr("preset_sort_duration")),
         ]
         for key, label in sort_items:
-            self.preset_sort_combo.addItem(label, key)
+            self.preset_sort_combo.addItem(label, QIcon(), key)
         current_sort = self._preset_sort_mode
         for i in range(self.preset_sort_combo.count()):
             if self.preset_sort_combo.itemData(i) == current_sort:
