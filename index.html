@@ -53,257 +53,13 @@
         }
     </script>
     
-    <style>
-        :root {
-            --bg: #f4f7fb;
-            --ink: #0f172a;
-            --muted: #475569;
-            --card: rgba(255, 255, 255, 0.78);
-            --border: rgba(15, 23, 42, 0.08);
-            --accent: #3b82f6;
-            --accent-2: #f97316;
-        }
-        .dark {
-            --bg: #0b101a;
-            --ink: #e5e7eb;
-            --muted: #94a3b8;
-            --card: rgba(17, 24, 39, 0.68);
-            --border: rgba(255, 255, 255, 0.08);
-            --accent: #60a5fa;
-            --accent-2: #fb923c;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--ink);
-        }
-
-        .bg-mesh {
-            background:
-                radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.22), transparent 60%),
-                radial-gradient(900px 520px at 95% 12%, rgba(249, 115, 22, 0.18), transparent 55%),
-                radial-gradient(900px 520px at 40% 90%, rgba(14, 165, 233, 0.16), transparent 60%);
-            animation: mesh-shift 26s ease-in-out infinite;
-        }
-        .dark .bg-mesh {
-            background:
-                radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.18), transparent 60%),
-                radial-gradient(900px 520px at 95% 12%, rgba(251, 146, 60, 0.18), transparent 55%),
-                radial-gradient(900px 520px at 40% 90%, rgba(96, 165, 250, 0.12), transparent 60%);
-        }
-        .noise {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-            opacity: 0.35;
-            mix-blend-mode: soft-light;
-        }
-
-        .text-ink {
-            color: var(--ink);
-        }
-        .text-muted {
-            color: var(--muted);
-        }
-
-        .nav-shell {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(18px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-            position: relative;
-        }
-        .dark .nav-shell {
-            background: rgba(15, 23, 42, 0.68);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
-        }
-        .nav-link {
-            padding: 0.35rem 0.75rem;
-            border-radius: 999px;
-            transition: color 0.2s ease, background 0.2s ease;
-        }
-        .nav-link:hover {
-            color: var(--ink);
-            background: rgba(59, 130, 246, 0.1);
-        }
-        .dark .nav-link:hover {
-            background: rgba(59, 130, 246, 0.18);
-        }
-
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
-            transition: transform 0.35s ease, box-shadow 0.35s ease;
-        }
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 24px 55px rgba(15, 23, 42, 0.18);
-        }
-
-        .feature-frame {
-            background: linear-gradient(120deg, rgba(59, 130, 246, 0.5), rgba(249, 115, 22, 0.35), rgba(37, 99, 235, 0.4));
-            padding: 1px;
-            border-radius: 24px;
-        }
-        .feature-inner {
-            background: var(--card);
-            border-radius: 24px;
-            border: 1px solid var(--border);
-        }
-        .glow-shell {
-            position: relative;
-            z-index: 1;
-        }
-        .glow-shell::before {
-            content: "";
-            position: absolute;
-            inset: -14px;
-            border-radius: 32px;
-            background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.25), transparent 60%),
-                        radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.2), transparent 55%);
-            filter: blur(12px);
-            z-index: -1;
-            opacity: 0.85;
-            animation: halo-pulse 10s ease-in-out infinite;
-        }
-        .dark .glow-shell::before {
-            background: radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.2), transparent 60%),
-                        radial-gradient(circle at 80% 0%, rgba(251, 146, 60, 0.2), transparent 55%);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #f97316, #fb923c);
-            color: #fff;
-            box-shadow: 0 12px 30px rgba(249, 115, 22, 0.28);
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 16px 36px rgba(249, 115, 22, 0.35);
-        }
-        .btn-ghost {
-            background: rgba(255, 255, 255, 0.65);
-            border: 1px solid var(--border);
-            color: var(--ink);
-            transition: transform 0.25s ease, border 0.25s ease;
-        }
-        .dark .btn-ghost {
-            background: rgba(15, 23, 42, 0.65);
-        }
-        .btn-ghost:hover {
-            transform: translateY(-2px);
-            border-color: rgba(59, 130, 246, 0.35);
-        }
-
-        .tag {
-            border: 1px solid rgba(59, 130, 246, 0.25);
-            background: rgba(59, 130, 246, 0.08);
-            color: var(--ink);
-        }
-        .dark .tag {
-            border: 1px solid rgba(96, 165, 250, 0.25);
-            background: rgba(96, 165, 250, 0.08);
-        }
-
-        .display-title {
-            letter-spacing: 0.02em;
-        }
-        .text-gradient {
-            background: linear-gradient(120deg, var(--accent), var(--accent-2), var(--accent));
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .bg-dots {
-            background-image: radial-gradient(rgba(59, 130, 246, 0.22) 1.2px, transparent 0);
-            background-size: 34px 34px;
-            opacity: 0.45;
-            animation: float-dots 16s ease-in-out infinite;
-        }
-        .bg-dots-2 {
-            background-image: radial-gradient(rgba(249, 115, 22, 0.18) 1.6px, transparent 0);
-            background-size: 56px 56px;
-            opacity: 0.28;
-            filter: blur(0.3px);
-            animation: float-dots-2 22s ease-in-out infinite;
-        }
-        .dark .bg-dots {
-            background-image: radial-gradient(rgba(96, 165, 250, 0.2) 1.2px, transparent 0);
-        }
-        .dark .bg-dots-2 {
-            background-image: radial-gradient(rgba(251, 146, 60, 0.2) 1.6px, transparent 0);
-        }
-
-        a:focus-visible,
-        button:focus-visible {
-            outline: 2px solid rgba(59, 130, 246, 0.6);
-            outline-offset: 3px;
-        }
-        .dark a:focus-visible,
-        .dark button:focus-visible {
-            outline-color: rgba(96, 165, 250, 0.6);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            html {
-                scroll-behavior: auto;
-            }
-            .bg-mesh,
-            .bg-dots,
-            .bg-dots-2,
-            .glow-orb,
-            .glow-shell::before {
-                animation: none !important;
-            }
-        }
-
-        .glow-orb {
-            border-radius: 999px;
-            filter: blur(40px);
-            opacity: 0.55;
-            animation: orb-drift 18s ease-in-out infinite;
-        }
-        .glow-orb--a {
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.5), transparent 65%);
-        }
-        .glow-orb--b {
-            background: radial-gradient(circle, rgba(249, 115, 22, 0.45), transparent 65%);
-            animation-duration: 24s;
-        }
-
-        @keyframes float-dots {
-            0% { transform: translate3d(0, 0, 0); }
-            50% { transform: translate3d(14px, 20px, 0); }
-            100% { transform: translate3d(0, 0, 0); }
-        }
-        @keyframes float-dots-2 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(-18px, 12px, 0) scale(1.02); }
-            100% { transform: translate3d(0, 0, 0) scale(1); }
-        }
-        @keyframes mesh-shift {
-            0% { background-position: 0% 0%, 100% 0%, 50% 100%; }
-            50% { background-position: 10% 10%, 85% 5%, 45% 90%; }
-            100% { background-position: 0% 0%, 100% 0%, 50% 100%; }
-        }
-        @keyframes halo-pulse {
-            0% { opacity: 0.6; transform: scale(0.98); }
-            50% { opacity: 0.9; transform: scale(1.02); }
-            100% { opacity: 0.6; transform: scale(0.98); }
-        }
-        @keyframes orb-drift {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(24px, -18px, 0) scale(1.05); }
-            100% { transform: translate3d(0, 0, 0) scale(1); }
-        }
-    </style>
+    <link rel="stylesheet" href="styles/main.css">
     <script>
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark')
-        } else {
-            document.documentElement.classList.remove('dark')
-        }
+        const themeMode = localStorage.getItem('themeMode') || 'system';
+        const manualTheme = localStorage.getItem('theme') || 'light';
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const shouldUseDark = themeMode === 'manual' ? manualTheme === 'dark' : prefersDark;
+        document.documentElement.classList.toggle('dark', shouldUseDark);
     </script>
 </head>
 <body class="font-body antialiased relative selection:bg-brand-200 dark:selection:bg-brand-900">
@@ -335,12 +91,20 @@
                     <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="nav-link text-sm text-muted">GitHub</a>
                     <a href="https://github.com/RE-TikaRa/DesktopTimer" target="_blank" class="px-4 py-2 rounded-full btn-ghost text-sm font-medium">查看源码</a>
                     <a href="https://github.com/RE-TikaRa/DesktopTimer/releases/latest" target="_blank" class="px-4 py-2 rounded-full btn-primary text-sm font-medium">立即下载</a>
+                    <button id="theme-mode-toggle" aria-label="切换主题模式" class="flex items-center gap-1 px-3 py-2 rounded-full hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors focus:outline-none">
+                        <i class="fas fa-desktop text-slate-600 dark:text-slate-200 text-sm"></i>
+                        <span class="text-xs font-medium text-slate-600 dark:text-slate-200">系统</span>
+                    </button>
                     <button id="theme-toggle" aria-label="切换主题" class="p-2 rounded-full hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors focus:outline-none">
                         <i class="fas fa-moon dark:hidden text-slate-600"></i>
                         <i class="fas fa-sun hidden dark:block text-amber-300"></i>
                     </button>
                 </div>
                 <div class="md:hidden flex items-center">
+                    <button id="mobile-theme-mode-toggle" aria-label="切换主题模式" class="flex items-center gap-1 px-3 py-2 mr-2 rounded-full hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors focus:outline-none">
+                        <i class="fas fa-desktop text-slate-600 dark:text-slate-200 text-sm"></i>
+                        <span class="text-xs font-medium text-slate-600 dark:text-slate-200">系统</span>
+                    </button>
                     <button id="mobile-theme-toggle" aria-label="切换主题" class="p-2 mr-2 rounded-full hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors focus:outline-none">
                         <i class="fas fa-moon dark:hidden text-slate-600"></i>
                         <i class="fas fa-sun hidden dark:block text-amber-300"></i>
@@ -579,47 +343,6 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script>
-        AOS.init({
-            once: true,
-            offset: 50,
-            duration: 800,
-        });
-
-        // Theme Toggle Logic
-        function toggleTheme() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.theme = 'light';
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.theme = 'dark';
-            }
-        }
-
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        const mobileThemeToggleBtn = document.getElementById('mobile-theme-toggle');
-        
-        if(themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
-        if(mobileThemeToggleBtn) mobileThemeToggleBtn.addEventListener('click', toggleTheme);
-
-        // Mobile Menu Logic
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileMenu = document.getElementById('mobile-menu');
-
-        if (mobileMenuBtn && mobileMenu) {
-            mobileMenuBtn.addEventListener('click', () => {
-                mobileMenu.classList.toggle('hidden');
-                const icon = mobileMenuBtn.querySelector('i');
-                if (mobileMenu.classList.contains('hidden')) {
-                    icon.classList.remove('fa-times');
-                    icon.classList.add('fa-bars');
-                } else {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-times');
-                }
-            });
-        }
-    </script>
+    <script src="scripts/main.js"></script>
 </body>
 </html>
