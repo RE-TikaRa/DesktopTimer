@@ -1460,6 +1460,7 @@ class TimerWindow(QMainWindow):
             self.update_tray_icon()
         except Exception:
             pass
+        self._apply_input_transparency(self.is_locked)
 
     def exit_fullscreen(self):
         """�˳�ȫ��ģʽ"""
@@ -1481,6 +1482,7 @@ class TimerWindow(QMainWindow):
             self.update_tray_icon()
         except Exception:
             pass
+        self._apply_input_transparency(self.is_locked)
             
     def tray_icon_activated(self, reason):
         """托盘图标激活事件"""
@@ -1496,14 +1498,24 @@ class TimerWindow(QMainWindow):
             return
         self._hold_menu(menu, "_tray_menu")
         self._exec_menu(menu, QCursor.pos())
+
+    def _apply_input_transparency(self, enabled: bool) -> None:
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, enabled)
+        transparent_flag = getattr(Qt.WindowType, "WindowTransparentForInput", None)
+        if transparent_flag is not None:
+            self.setWindowFlag(transparent_flag, enabled)
+            if self.isVisible():
+                if self.is_fullscreen:
+                    self.showFullScreen()
+                else:
+                    self.show()
     
     def toggle_lock(self):
         """切换窗口锁定状态"""
         self.is_locked = not self.is_locked
         
         if self.is_locked:
-            # 锁定：只设置鼠标事件穿透，保留键盘事件以便快捷键仍然有效
-            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            self._apply_input_transparency(True)
             self.tray_icon.showMessage(
                 self.tr('app_name'),
                 self.tr('window_locked'),
@@ -1522,8 +1534,7 @@ class TimerWindow(QMainWindow):
                 except Exception as e:
                     logger.warning("Windows toast failed: %s", e)
         else:
-            # 解锁：恢复窗口交互
-            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+            self._apply_input_transparency(False)
             
             # Windows原生通知 - 解锁
             if toaster:
