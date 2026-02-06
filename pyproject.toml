@@ -16,7 +16,10 @@ dependencies = [
 Homepage = "https://github.com/RE-TikaRa/DesktopTimer"
 
 [dependency-groups]
-dev = ["pyinstaller"]
+dev = [
+    "pyinstaller",
+    "ruff>=0.15.0",
+]
 
 [build-system]
 requires = ["setuptools>=68,<81"]

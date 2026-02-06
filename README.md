@@ -26,8 +26,9 @@
 <h3 align="center">DesktopTimer | 桌面计时器</h3>
 
 <p align="center">
-基于 PyQt6 的轻量级桌面计时器，支持正计时/倒计时/时钟模式，系统托盘、快捷键、音效与闪烁提醒、多语言（中/英）以及丰富的外观自定义；设置页采用 PyQt6-Fluent-Widgets 组件。
+基于 PyQt6 的轻量级桌面计时器，支持正计时/倒计时/时钟模式，系统托盘、快捷键、音效与闪烁提醒、多语言（中/英）以及丰富的外观自定义；
 </p>
+
 
 <p align="center">
   <a href="https://github.com/RE-TikaRa/DesktopTimer/releases">下载最新版本</a> •
@@ -97,12 +98,13 @@
 ## 🛠️ 开发者指南
 
 ### 开发环境要求
-- Python 3.13（暂不支持 3.14，确保 UV 使用 3.13 解释器）
+- Python 3.13
 - Windows 10/11
-- 依赖管理：UV（已迁移）
+- 依赖管理：UV
 > 注：如需 Qt Designer 等工具，可另行安装 `pyqt6-tools`（与项目运行依赖无关）。
 
 ### 源码运行
+
 ```pwsh
 # 克隆与进入目录
 git clone https://github.com/RE-TikaRa/DesktopTimer.git
@@ -122,6 +124,7 @@ set DESKTOPTIMER_DEBUG=1
 ```
 
 ### 打包为可执行文件
+
 ```pwsh
 # 打包需要安装开发依赖
 uv sync --dev
@@ -172,7 +175,7 @@ DesktopTimer/
 - 路径管理：自动识别开发/打包环境，动态定位资源
 - 配置管理：JSON 持久化，包含版本兼容处理
 
-要点：使用 `sys.frozen` 识别打包环境；相对路径存储确保可移植；`QTimer`/`QMediaPlayer`/`QSystemTrayIcon` 组合；自动从 v1.0.0 设置迁移到 v1.0.1。
+要点：使用 `sys.frozen` 识别打包环境；相对路径存储确保可移植；`QTimer`/`QMediaPlayer`/`QSystemTrayIcon` 组合
 
 ---
 

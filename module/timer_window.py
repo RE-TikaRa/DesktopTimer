@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+import threading
 import types
 import uuid
 
@@ -1302,16 +1303,11 @@ class TimerWindow(QMainWindow):
                 self.show()
         
         # Windows原生通知
-        if self.settings.get("enable_windows_toast", True) and toaster:
-            try:
-                toaster.show_toast(
-                    "DesktopTimer",  # 通知标题
-                    self.tr('countdown_finished') + "\n" + self.tr('countdown_finished_msg'),
-                    duration=TimerConstants.NOTIFICATION_DURATION_LONG,
-                    threaded=True
-                )
-            except Exception as e:
-                logger.warning("Windows toast failed: %s", e)
+        self._show_windows_toast(
+            "DesktopTimer",
+            self.tr('countdown_finished') + "\n" + self.tr('countdown_finished_msg'),
+            TimerConstants.NOTIFICATION_DURATION_LONG,
+        )
         
         try:
             self.update_tray_icon()
@@ -1499,12 +1495,31 @@ class TimerWindow(QMainWindow):
         self._hold_menu(menu, "_tray_menu")
         self._exec_menu(menu, QCursor.pos())
 
+    def _show_windows_toast(self, title: str, message: str, duration: int) -> bool:
+        if not (self.settings.get("enable_windows_toast", True) and toaster):
+            return False
+
+        def _run() -> None:
+            try:
+                toaster.show_toast(
+                    title,
+                    message,
+                    duration=duration,
+                    threaded=False,
+                )
+            except Exception as e:
+                logger.warning("Windows toast failed: %s", e)
+
+        threading.Thread(target=_run, daemon=True).start()
+        return True
+
     def _apply_input_transparency(self, enabled: bool) -> None:
+        was_visible = self.isVisible()
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, enabled)
         transparent_flag = getattr(Qt.WindowType, "WindowTransparentForInput", None)
         if transparent_flag is not None:
             self.setWindowFlag(transparent_flag, enabled)
-            if self.isVisible():
+            if was_visible:
                 if self.is_fullscreen:
                     self.showFullScreen()
                 else:
@@ -1523,31 +1538,20 @@ class TimerWindow(QMainWindow):
                 1000
             )
             # Windows原生通知 - 锁定
-            if toaster:
-                try:
-                    toaster.show_toast(
-                        "DesktopTimer",
-                        self.tr('window_locked'),
-                        duration=TimerConstants.NOTIFICATION_DURATION_SHORT,
-                        threaded=True
-                    )
-                except Exception as e:
-                    logger.warning("Windows toast failed: %s", e)
+            self._show_windows_toast(
+                "DesktopTimer",
+                self.tr('window_locked'),
+                TimerConstants.NOTIFICATION_DURATION_SHORT,
+            )
         else:
             self._apply_input_transparency(False)
             
             # Windows原生通知 - 解锁
-            if toaster:
-                try:
-                    toaster.show_toast(
-                        "DesktopTimer",
-                        self.tr('window_unlocked'),
-                        duration=TimerConstants.NOTIFICATION_DURATION_SHORT,
-                        threaded=True
-                    )
-                except Exception as e:
-                    logger.warning("Windows toast failed: %s", e)
-            else:
+            if not self._show_windows_toast(
+                "DesktopTimer",
+                self.tr('window_unlocked'),
+                TimerConstants.NOTIFICATION_DURATION_SHORT,
+            ):
                 # 如果没有 Windows 通知，使用托盘通知
                 self.tray_icon.showMessage(
                     self.tr('app_name'),
