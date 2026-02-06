@@ -21,7 +21,7 @@ DEFAULT_COUNTDOWN_PRESETS = [
     {"id": "builtin_3h", "mode": "countdown", "hours": 3, "minutes": 0, "seconds": 0},
 ]
 
-APP_VERSION = "2.0.1"
+APP_VERSION = "2.0.2"
 PROJECT_URL = "https://github.com/RE-TikaRa/DesktopTimer"
 
 
