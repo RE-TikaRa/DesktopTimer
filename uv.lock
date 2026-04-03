@@ -22,7 +22,7 @@ wheels = [
 
 [[package]]
 name = "desktoptimer"
-version = "2.0.2"
+version = "2026.04.03"
 source = { editable = "." }
 dependencies = [
     { name = "pyqt6" },

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "DeskTop Timer"
-#define MyAppVersion "2.0.2"
+#define MyAppVersion "2026.04.03"
 #define MyAppPublisher "TikaRa"
 #define MyAppURL "https://re-tikara.fun/"
 #define MyAppExeName "DesktopTimer.exe"
