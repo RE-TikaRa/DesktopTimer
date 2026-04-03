@@ -20,7 +20,7 @@ ENV/
 # Build artifacts
 build/
 dist/
-setup/
+setup/Output/
 *.zip
 
 # IDE
