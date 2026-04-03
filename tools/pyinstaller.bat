@@ -1,5 +1,9 @@
 @echo off
 setlocal
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "ROOT_DIR=%%~fI"
+set "UV_LINK_MODE=copy"
+pushd "%ROOT_DIR%" >nul
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
 set "C_RESET=%ESC%[0m"
 set "C_RED=%ESC%[31m"
@@ -59,9 +63,11 @@ goto :done
 :fail
 echo.
 echo %C_RED%[ERROR]%C_RESET% Build failed.
+popd >nul
 exit /b 1
 
 :done
 echo.
 echo Done.
+popd >nul
 pause

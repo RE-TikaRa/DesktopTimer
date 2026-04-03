@@ -183,7 +183,7 @@ DesktopTimer/
 
 - 使用 `DesktopTimer.spec` 进行 onefile 打包，输出 `dist/DesktopTimer.exe`
 - 将 `img/`、`lang/`、`sounds/` 复制到 `dist/` 下，确保资源可用
-- 可使用 Inno Setup 生成安装程序（参考 `setup/SetUp.iss`）
+- 可使用 Inno Setup 生成安装程序（参考 `setup/setup.iss`）
 
 ---
 
@@ -247,13 +247,8 @@ DesktopTimer/
 - 更易用的预设多语言编辑视图（统一列表，可批量维护）
 - 替换 win10toast 或移除其中的 `pkg_resources` 依赖以适配未来环境
 
-### 🛠️ 近期待修复
-- 时钟模式下“暂停/继续”的行为与界面语义需要统一（当前时钟直接读取系统时间，暂停状态无实际效果）
-- 设置页对相对路径铃声文件的显示判断需要修复，避免已选择 `sounds/` 内文件却显示为“未选择”
-- 应用设置时避免无条件将窗口重新居中，尽量保留用户拖动后的位置
-- 模式切换相关界面判断统一改为基于 `timer_mode_key`，减少对中英文文本匹配的依赖
+### 🛠️ 近期待优化
 - 继续拆分 `TimerWindow` / `SettingsDialog` 中的预设、通知、托盘菜单等重复逻辑，降低单文件复杂度
-- 安装脚本 `setup/setup.iss` 需改为更通用的相对路径或可配置路径，减少对本机目录的硬编码依赖
 
 ---
 

@@ -106,6 +106,11 @@ class SettingsDialog(QDialog):
             return self.parent_window.base_path
         return get_base_path()
 
+    def _resolve_sound_path(self, sound_path: str) -> str:
+        if sound_path and not os.path.isabs(sound_path):
+            return os.path.join(self._base_path(), sound_path)
+        return sound_path
+
     def _find_other_language(self, current_code: str) -> str:
         for code in LANGUAGES.keys():
             if code != current_code:
@@ -619,7 +624,7 @@ class SettingsDialog(QDialog):
             self.parent_window.settings['timer_mode_key'] = key
         index = {'countup': 0, 'countdown': 1, 'clock': 2}.get(key, 1)
         self.mode_combo.setCurrentIndex(index)
-        self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
+        self.mode_combo.currentIndexChanged.connect(self.on_mode_changed)
         mode_card = SettingCard(
             FluentIcon.STOP_WATCH,
             self.tr('mode'),
@@ -817,7 +822,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.clock_widget)
         
         # 根据当前模式显示/隐藏倒计时设置
-        self.on_mode_changed(self.mode_combo.currentText())
+        self.on_mode_changed(self.mode_combo.currentIndex())
         
         layout.addStretch()
         widget.setLayout(layout)
@@ -1020,7 +1025,7 @@ class SettingsDialog(QDialog):
         if new_lang == current:
             return
         self.parent_window.settings["language"] = new_lang
-        self.parent_window.apply_settings(preserve_elapsed=True)
+        self.parent_window.apply_settings(preserve_elapsed=True, preserve_position=True)
         self.parent_window.create_tray_menu()
         try:
             self.parent_window.reload_shortcuts()
@@ -1457,7 +1462,8 @@ class SettingsDialog(QDialog):
         _sync_volume_enabled()
         
         current_sound = self.parent_window.settings.get("sound_file", "")
-        display_name = os.path.basename(current_sound) if current_sound and os.path.exists(current_sound) else self.tr('no_sound_file')
+        resolved_sound = self._resolve_sound_path(current_sound)
+        display_name = os.path.basename(current_sound) if current_sound and os.path.exists(resolved_sound) else self.tr('no_sound_file')
         self.sound_file_card = PushSettingCard(
             self.tr('choose_sound'),
             FluentIcon.MUSIC_FOLDER,
@@ -1554,10 +1560,10 @@ class SettingsDialog(QDialog):
         
         return wrapper
         
-    def on_mode_changed(self, mode):
+    def on_mode_changed(self, index):
         """模式改变时的处理"""
-        is_countdown = self.tr('countdown_mode') in mode or '倒计时' in mode
-        is_clock = self.tr('clock_mode') in mode or '时钟' in mode
+        is_countdown = index == 1
+        is_clock = index == 2
         
         self.countdown_widget.setVisible(is_countdown)
         self.clock_widget.setVisible(is_clock)
@@ -1759,10 +1765,7 @@ class SettingsDialog(QDialog):
         """测试铃声"""
         sound_file = self.parent_window.settings.get("sound_file", "")
         if sound_file:
-            # 如果是相对路径，转换为绝对路径
-            if not os.path.isabs(sound_file):
-                base_path = self._base_path()
-                sound_file = os.path.join(base_path, sound_file)
+            sound_file = self._resolve_sound_path(sound_file)
             
             if os.path.exists(sound_file):
                 self.parent_window.play_sound(sound_file)
@@ -1914,7 +1917,7 @@ class SettingsDialog(QDialog):
         # 应用窗口大小设置（滑块控制字体大小）
         self.parent_window.settings["font_size"] = self.size_slider.value()
 
-        self.parent_window.apply_settings()
+        self.parent_window.apply_settings(preserve_position=True)
         self._sync_fluent_theme(theme_mode)
         # 让主窗口根据新快捷键重载绑定
         try:
@@ -1936,7 +1939,7 @@ class SettingsDialog(QDialog):
         if not getattr(self, "_applied_once", False):
             self.parent_window.settings["language"] = self._initial_lang_code
             self.parent_window.settings["theme_mode"] = self._initial_theme_mode
-            self.parent_window.apply_settings(preserve_elapsed=True)
+            self.parent_window.apply_settings(preserve_elapsed=True, preserve_position=True)
             self.parent_window.create_tray_menu()
             try:
                 self.parent_window.reload_shortcuts()

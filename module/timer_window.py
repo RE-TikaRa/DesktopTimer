@@ -237,6 +237,14 @@ class TimerWindow(QMainWindow):
         if has_flash:
             return 'flash'
         return 'beep'
+
+    def current_mode_key(self):
+        """返回当前语言无关的模式键。"""
+        mode_key = self.settings.get('timer_mode_key')
+        if mode_key not in ('countup', 'countdown', 'clock'):
+            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
+            self.settings['timer_mode_key'] = mode_key
+        return mode_key
         
     def get_language(self):
         """从设置获取语言代码"""
@@ -823,9 +831,10 @@ class TimerWindow(QMainWindow):
             if getattr(self, "tray_icon", None) is not None:
                 self.create_tray_menu()
         
-    def apply_settings(self, preserve_elapsed=False):
+    def apply_settings(self, preserve_elapsed=False, preserve_position=False):
         """应用设置"""
         self._ensure_language()
+        current_pos = self.pos() if preserve_position and not self.is_fullscreen else None
 
         theme_mode = self.settings.get("theme_mode", "auto")
         self._apply_fluent_theme(theme_mode, lazy=True)
@@ -877,11 +886,7 @@ class TimerWindow(QMainWindow):
         """)
         
         # 重置计时器根据模式键（语言无关）
-        mode_key = self.settings.get('timer_mode_key')
-        if not mode_key:
-            # 兜底：从旧文本推断
-            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
-            self.settings['timer_mode_key'] = mode_key
+        mode_key = self.current_mode_key()
         logger.debug("apply_settings with mode_key=%s", mode_key)
         if not preserve_elapsed:
             if mode_key == 'countdown':
@@ -899,7 +904,10 @@ class TimerWindow(QMainWindow):
         if not self.is_fullscreen:
             self.time_label.adjustSize()
             self.resize(self.time_label.size())
-            self.center_on_screen()
+            if current_pos is not None:
+                self.move(current_pos)
+            else:
+                self.center_on_screen()
 
         # 更新托盘图标
         self.update_tray_icon()
@@ -1027,15 +1035,17 @@ class TimerWindow(QMainWindow):
     def create_tray_menu(self):
         """创建托盘菜单"""
         tray_menu = self._new_menu(is_tray=True)
+        is_clock_mode = self.current_mode_key() == 'clock'
         
         # 开始/暂停动作
-        pause_text = self.tr('pause') if self.is_running else self.tr('continue')
+        pause_text = self.tr('pause') if (self.is_running or is_clock_mode) else self.tr('continue')
         self.pause_action = QAction(pause_text, self)
         self._apply_action_icon(
             self.pause_action,
-            FluentIcon.PAUSE if self.is_running else FluentIcon.PLAY,
+            FluentIcon.PAUSE if (self.is_running or is_clock_mode) else FluentIcon.PLAY,
         )
         self.pause_action.triggered.connect(self.toggle_pause)
+        self.pause_action.setEnabled(not is_clock_mode)
         tray_menu.addAction(self.pause_action)
         
         # 重置动作
@@ -1149,10 +1159,7 @@ class TimerWindow(QMainWindow):
     def update_time(self):
         """更新时间显示"""
         # 使用 language-independent 模式键
-        mode_key = self.settings.get('timer_mode_key')
-        if not mode_key:
-            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
-            self.settings['timer_mode_key'] = mode_key
+        mode_key = self.current_mode_key()
         
         # 时钟模式
         # 调试首帧输出当前模式
@@ -1345,6 +1352,8 @@ class TimerWindow(QMainWindow):
             
     def toggle_pause(self):
         """切换暂停/继续"""
+        if self.current_mode_key() == 'clock':
+            return
         self.is_running = not self.is_running
         if self.is_running:
             self.pause_action.setText(self.tr('pause'))
@@ -1370,10 +1379,7 @@ class TimerWindow(QMainWindow):
     
     def reset_timer(self):
         """重置计时：倒计时回到初始设置，正计时归零"""
-        mode_key = self.settings.get('timer_mode_key')
-        if not mode_key:
-            mode_key = self.derive_mode_key(self.settings.get('timer_mode', ''))
-            self.settings['timer_mode_key'] = mode_key
+        mode_key = self.current_mode_key()
         if mode_key == 'countdown':
             hours = self.settings.get("countdown_hours", 0)
             minutes = self.settings.get("countdown_minutes", 0)
@@ -1624,14 +1630,16 @@ class TimerWindow(QMainWindow):
         if event is None:
             return
         menu = self._new_menu()
+        is_clock_mode = self.current_mode_key() == 'clock'
         
         # 暂停/继续
-        pause_action = QAction(self.tr('pause') if self.is_running else self.tr('continue'), self)
+        pause_action = QAction(self.tr('pause') if (self.is_running or is_clock_mode) else self.tr('continue'), self)
         self._apply_action_icon(
             pause_action,
-            FluentIcon.PAUSE if self.is_running else FluentIcon.PLAY,
+            FluentIcon.PAUSE if (self.is_running or is_clock_mode) else FluentIcon.PLAY,
         )
         pause_action.triggered.connect(self.toggle_pause)
+        pause_action.setEnabled(not is_clock_mode)
         menu.addAction(pause_action)
         
         # 重置
